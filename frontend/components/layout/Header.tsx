@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Bell, Video, Menu, Sparkles, X, Info } from "lucide-react";
+import React from "react";
+import Link from "next/link";
+import { Search, Bell, Video, Menu, Sparkles, X } from "lucide-react";
 
 interface HeaderProps {
   searchQuery: string;
@@ -15,17 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   setSearchQuery,
   toggleSidebar,
 }) => {
-  const [showUploadToast, setShowUploadToast] = useState(false);
-
-  const handleUploadClick = () => {
-    setShowUploadToast(true);
-    setTimeout(() => {
-      setShowUploadToast(false);
-    }, 4000);
-  };
-
   return (
-    <>
       <header className="sticky top-0 z-50 glass-header px-4 lg:px-6 py-3 flex items-center justify-between gap-4">
         {/* Left Branding & Mobile Toggle */}
         <div className="flex items-center gap-3">
@@ -78,14 +69,14 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right User Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={handleUploadClick}
+          <Link
+            href="/studio/upload"
             title="Upload Video"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-surface border border-surface-border hover:border-adless-cyan/50 hover:bg-surface-hover text-slate-200 transition active:scale-95"
           >
             <Video className="w-4 h-4 text-adless-cyan" />
             <span>Upload</span>
-          </button>
+          </Link>
 
           <button
             title="Notifications"
@@ -103,27 +94,5 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </header>
-
-      {/* Upload Coming Soon Notification Toast */}
-      {showUploadToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-surface-card border border-adless-cyan/40 px-4 py-3 rounded-2xl shadow-glow-cyan text-slate-100 animate-in fade-in slide-in-from-bottom-5">
-          <div className="w-8 h-8 rounded-xl bg-adless-cyan/15 flex items-center justify-center text-adless-cyan shrink-0">
-            <Info className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-adless-cyan">Upload Support Coming Soon</h4>
-            <p className="text-xs text-slate-300">
-              Please select one of the preloaded demo videos on the homepage for AI scene placement testing.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowUploadToast(false)}
-            className="text-slate-400 hover:text-white ml-2"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </>
   );
 };

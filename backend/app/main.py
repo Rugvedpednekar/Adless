@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.videos import router as videos_router
 from app.core.config import settings
 
 app = FastAPI(
@@ -16,6 +17,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(videos_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/health", tags=["System"])

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { CategoryPills } from "@/components/video/CategoryPills";
 import { VideoGrid } from "@/components/video/VideoGrid";
-import { MOCK_VIDEOS } from "@/lib/mock-data";
-import { NavCategory } from "@/types";
+import { getVideos } from "@/services/video-service";
+import { NavCategory, Video } from "@/types";
 import { Sparkles, ShieldCheck, Zap } from "lucide-react";
 
 export default function HomePage() {
@@ -14,10 +14,23 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<NavCategory>("All");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeNavTab, setActiveNavTab] = useState("Home");
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getVideos()
+      .then((catalog) => {
+        setVideos(catalog);
+        setCatalogError(null);
+      })
+      .catch(() => {
+        setCatalogError("Unable to load videos. Make sure the FastAPI backend is running on port 8000.");
+      });
+  }, []);
 
   // Client-side local filtering
   const filteredVideos = useMemo(() => {
-    return MOCK_VIDEOS.filter((video) => {
+    return videos.filter((video) => {
       const matchesCategory =
         selectedCategory === "All" || video.category === selectedCategory;
       const matchesSearch =
@@ -26,7 +39,7 @@ export default function HomePage() {
         video.category.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [videos, searchQuery, selectedCategory]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -96,7 +109,13 @@ export default function HomePage() {
                 </span>
               </h2>
             </div>
-            <VideoGrid videos={filteredVideos} />
+            {catalogError ? (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">
+                {catalogError}
+              </div>
+            ) : (
+              <VideoGrid videos={filteredVideos} />
+            )}
           </section>
         </main>
       </div>

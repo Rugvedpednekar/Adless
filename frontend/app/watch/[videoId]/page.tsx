@@ -6,8 +6,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { DEMO_VIDEOS } from "@/lib/demo-videos";
-import { Video } from "@/types";
+import { VideoThumbnail } from "@/components/video/VideoThumbnail";
+import { analyzeVideoWithGemini, getVideo, getVideos } from "@/services/video-service";
+import { Video, VideoAnalysis } from "@/types";
 import {
   Sparkles,
   ArrowLeft,
@@ -18,8 +19,9 @@ import {
   ThumbsUp,
   Share2,
   Bookmark,
-  Info,
-  X,
+  Clock3,
+  Loader2,
+  RefreshCw,
   FileVideo
 } from "lucide-react";
 
@@ -29,45 +31,70 @@ export default function WatchPage() {
   const videoId = params?.videoId as string;
 
   const [video, setVideo] = useState<Video | null>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeNavTab, setActiveNavTab] = useState("Home");
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<VideoAnalysis | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<"ready" | "loading" | "success" | "error">("ready");
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     if (videoId) {
-      const found = DEMO_VIDEOS.find((v) => v.id === videoId);
-      if (found) {
-        setVideo(found);
-        setVideoError(false);
-      } else {
-        // Fallback to first video if ID not found directly
-        setVideo(DEMO_VIDEOS[0]);
-      }
+      Promise.all([getVideo(videoId), getVideos()])
+        .then(([selectedVideo, catalog]) => {
+          setVideo(selectedVideo);
+          setVideos(catalog);
+          setVideoError(false);
+          setCatalogError(null);
+        })
+        .catch(() => {
+          setCatalogError("Unable to load this video from the FastAPI catalog.");
+        });
     }
   }, [videoId]);
 
-  const handleAnalyzeClick = () => {
-    setToastMessage("Gemini analysis will be connected in next step.");
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 5000);
+  const handleAnalyzeClick = async (force = false) => {
+    setAnalysisStatus("loading");
+    setAnalysisError(null);
+    try {
+      const result = await analyzeVideoWithGemini(videoId, force);
+      setAnalysis(result);
+      setAnalysisStatus("success");
+    } catch (error) {
+      setAnalysisStatus("error");
+      setAnalysisError(
+        error instanceof Error ? error.message : "Gemini analysis failed."
+      );
+    }
   };
 
   if (!video) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-slate-300">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-adless-cyan border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">Loading video workspace...</p>
+          {catalogError ? (
+            <AlertTriangle className="h-10 w-10 text-amber-400" />
+          ) : (
+            <div className="w-10 h-10 border-2 border-adless-cyan border-t-transparent rounded-full animate-spin"></div>
+          )}
+          <p className="text-sm font-medium">
+            {catalogError || "Loading video workspace..."}
+          </p>
+          {catalogError && (
+            <Link href="/" className="text-sm font-semibold text-adless-cyan hover:underline">
+              Return to homepage
+            </Link>
+          )}
         </div>
       </div>
     );
   }
 
   const confidenceScore = video.placementConfidence || 95;
-  const otherVideos = DEMO_VIDEOS.filter((v) => v.id !== video.id);
+  const otherVideos = videos.filter((item) => item.id !== video.id);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -224,7 +251,7 @@ export default function WatchPage() {
                 </div>
               </div>
 
-              {/* AI Scene Analysis Section (Prepared for Gemini Workflow) */}
+              {/* Gemini-powered scene analysis */}
               <div className="p-5 rounded-2xl bg-gradient-to-br from-surface to-background border border-adless-cyan/30 shadow-glow-cyan space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -234,8 +261,14 @@ export default function WatchPage() {
                     <div>
                       <h3 className="font-bold text-sm text-white flex items-center gap-2">
                         AI Scene Analysis
-                        <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                          Status: Ready for analysis
+                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${
+                          analysisStatus === "error"
+                            ? "bg-red-500/10 text-red-400 border-red-500/30"
+                            : analysisStatus === "success"
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                              : "bg-adless-cyan/10 text-adless-cyan border-adless-cyan/30"
+                        }`}>
+                          Status: {analysisStatus === "loading" ? "Analyzing" : analysisStatus === "success" ? "Complete" : analysisStatus === "error" ? "Failed" : "Ready for analysis"}
                         </span>
                       </h3>
                       <p className="text-xs text-slate-400">
@@ -245,36 +278,57 @@ export default function WatchPage() {
                   </div>
 
                   <button
-                    onClick={handleAnalyzeClick}
+                    onClick={() => handleAnalyzeClick(analysisStatus === "success")}
+                    disabled={analysisStatus === "loading"}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-adless-cyan to-blue-600 text-slate-950 shadow-glow-cyan hover:opacity-95 transition active:scale-95"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Analyze with Gemini</span>
+                    {analysisStatus === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : analysisStatus === "success" ? <RefreshCw className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                    <span>{analysisStatus === "loading" ? "Analyzing..." : analysisStatus === "success" ? "Analyze Fresh" : analysisStatus === "error" ? "Retry Analysis" : "Analyze with Gemini"}</span>
                   </button>
                 </div>
 
-                {/* API Payload Schema Preview */}
-                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] text-slate-400 space-y-2">
-                  <div className="flex items-center justify-between text-slate-500 text-[10px] uppercase tracking-wider pb-1 border-b border-slate-800">
-                    <span>Target API Endpoint: POST /api/videos/{video.id}/analyze</span>
-                    <span>Structured Schema</span>
+                {analysisStatus === "loading" && (
+                  <div className="rounded-xl border border-adless-cyan/20 bg-slate-950/70 p-5">
+                    <div className="flex items-center gap-3 text-sm font-semibold text-slate-200">
+                      <Loader2 className="h-5 w-5 animate-spin text-adless-cyan" />
+                      Gemini is analyzing this scene...
+                    </div>
+                    <div className="mt-4 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
+                      {[
+                        "Understanding scene",
+                        "Detecting objects",
+                        "Evaluating placement surfaces",
+                        "Identifying product categories",
+                      ].map((step) => <div key={step} className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">{step}</div>)}
+                    </div>
                   </div>
-                  <pre className="text-adless-cyan/90 overflow-x-auto whitespace-pre-wrap">
-{`{
-  "sceneType": "living_room",
-  "mood": "casual_positive",
-  "detectedObjects": ["coffee_table", "sofa", "lamp"],
-  "placementOpportunities": [
-    {
-      "surface": "coffee_table",
-      "category": "snack",
-      "confidence": ${confidenceScore / 100},
-      "reason": "Large unobstructed tabletop area suitable for natural product placement."
-    }
-  ]
-}`}
-                  </pre>
-                </div>
+                )}
+
+                {analysisStatus === "error" && (
+                  <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                    <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{analysisError}</span></div>
+                  </div>
+                )}
+
+                {analysisStatus === "success" && analysis && (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Video summary</h4>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-300">{analysis.summary}</p>
+                    </div>
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Detected scenes</h4>
+                      {analysis.scenes.map((scene, sceneIndex) => (
+                        <div key={`${scene.startTime}-${sceneIndex}`} className="rounded-2xl border border-adless-cyan/25 bg-adless-cyan/5 p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3"><h5 className="font-bold capitalize text-white">{scene.environment.replaceAll("_", " ")}</h5><span className="flex items-center gap-2 text-xs text-slate-300"><Clock3 className="h-4 w-4 text-adless-cyan" />{formatTimeRange(scene.startTime, scene.endTime)}</span></div>
+                          <p className="mt-2 text-xs capitalize text-slate-400">Mood: {scene.mood.replaceAll("_", " ")}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">{scene.objects.map((object) => <span key={object} className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs text-slate-300">{object.replaceAll("_", " ")}</span>)}</div>
+                          <div className="mt-4 space-y-3">{scene.placementOpportunities.map((opportunity, index) => <div key={`${opportunity.surface}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950/60 p-3"><div className="flex justify-between gap-3"><span className="font-semibold capitalize">{opportunity.surface.replaceAll("_", " ")}</span><span className="text-xs font-bold text-emerald-400">{Math.round(opportunity.confidence * 100)}%</span></div><div className="mt-2 flex flex-wrap gap-2">{opportunity.recommendedCategories.map((category) => <span key={category} className="rounded bg-slate-900 px-2 py-1 text-xs capitalize">{category.replaceAll("_", " ")}</span>)}</div><p className="mt-2 text-sm text-slate-400">{opportunity.reason}</p></div>)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -293,12 +347,11 @@ export default function WatchPage() {
                     className="group flex gap-3 p-2 rounded-xl bg-surface/40 hover:bg-surface border border-transparent hover:border-surface-border transition"
                   >
                     <div className="relative w-36 aspect-video rounded-lg overflow-hidden bg-slate-900 shrink-0">
-                      <Image
-                        src={item.thumbnailUrl}
+                      <VideoThumbnail
+                        thumbnailUrl={item.thumbnailUrl}
+                        videoSrc={item.videoSrc}
                         alt={item.title}
-                        fill
                         className="object-cover group-hover:scale-105 transition duration-300"
-                        unoptimized
                       />
                       <div className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-mono text-white">
                         {item.duration}
@@ -324,24 +377,12 @@ export default function WatchPage() {
         </main>
       </div>
 
-      {/* Gemini Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-surface-card border border-adless-cyan/40 px-4 py-3 rounded-2xl shadow-glow-cyan text-slate-100 animate-in fade-in slide-in-from-bottom-5">
-          <div className="w-8 h-8 rounded-xl bg-adless-cyan/15 flex items-center justify-center text-adless-cyan shrink-0">
-            <Info className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-adless-cyan">Gemini Integration Ready</h4>
-            <p className="text-xs text-slate-300">{toastMessage}</p>
-          </div>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="text-slate-400 hover:text-white ml-2"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
+}
+
+function formatTimeRange(start: number | null, end: number | null): string {
+  if (start === null || end === null) return "Time range not reliably determined";
+  const format = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.round(seconds % 60).toString().padStart(2, "0")}`;
+  return `${format(start)} – ${format(end)}`;
 }

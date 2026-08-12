@@ -2,7 +2,7 @@
 
 import React from "react";
 import { NavCategory } from "@/types";
-import { CATEGORIES } from "@/lib/mock-data";
+import { CATEGORIES } from "@/lib/categories";
 
 interface CategoryPillsProps {
   selectedCategory: NavCategory;

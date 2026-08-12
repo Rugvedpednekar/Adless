@@ -17,6 +17,9 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
+backend/.verification-assets/
+backend/.verification-tools/
 
 # Environment & Secrets
 .env
@@ -31,3 +34,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 frontend/public/videos/
+backend/uploads/videos/
+backend/.test-uploads/
+backend/cache/video_analysis/
+backend/data/video_catalog.json
+backend/credentials/
+**/*service-account*.json
+**/application_default_credentials.json

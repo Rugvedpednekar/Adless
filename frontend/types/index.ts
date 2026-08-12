@@ -8,9 +8,24 @@ export interface Creator {
 
 export interface PlacementOpportunity {
   surface: string;
-  category: string;
+  recommendedCategories: string[];
   confidence: number;
   reason: string;
+}
+
+export interface SceneAnalysis {
+  startTime: number;
+  endTime: number;
+  environment: string;
+  mood: string;
+  objects: string[];
+  placementOpportunities: PlacementOpportunity[];
+}
+
+export interface VideoAnalysis {
+  videoId: string;
+  summary: string;
+  scenes: SceneAnalysis[];
 }
 
 export interface AIAnalysisState {
@@ -47,6 +62,7 @@ export interface Video {
   status: "ready" | "processing" | "draft";
   aiAnalysis: AIAnalysisState;
   source: VideoSourceMetadata;
+  storagePath?: string | null;
 }
 
 export type NavCategory = "All" | "Technology" | "Gaming" | "Entertainment" | "AI & Future" | "Lifestyle";

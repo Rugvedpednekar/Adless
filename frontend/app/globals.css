@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .form-input {
+    @apply w-full rounded-xl border border-surface-border bg-slate-950/60 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-adless-cyan/60 focus:ring-1 focus:ring-adless-cyan/40;
+  }
+}
+
 :root {
   --color-bg: #090A0F;
   --color-surface: #121520;
