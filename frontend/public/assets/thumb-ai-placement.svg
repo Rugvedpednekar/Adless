@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A0E1A"/>
+      <stop offset="50%" stop-color="#121A2F"/>
+      <stop offset="100%" stop-color="#1B0F2A"/>
+    </linearGradient>
+    <linearGradient id="cyan-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#7000FF"/>
+    </linearGradient>
+    <linearGradient id="box-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg1)"/>
+  
+  <!-- Perspective Grid lines -->
+  <path d="M0,500 L1280,500 M0,580 L1280,580 M0,640 L1280,640 M0,680 L1280,680" stroke="#00F0FF" stroke-opacity="0.15" stroke-width="2"/>
+  <path d="M640,360 L0,720 M640,360 L250,720 M640,360 L500,720 M640,360 L780,720 M640,360 L1030,720 M640,360 L1280,720" stroke="#00F0FF" stroke-opacity="0.1" stroke-width="2"/>
+
+  <!-- Glowing AI Bounding Box overlay -->
+  <rect x="380" y="220" width="520" height="300" rx="16" fill="url(#box-glow)" stroke="#00F0FF" stroke-width="3" stroke-dasharray="12 8"/>
+  <text x="400" y="255" font-family="sans-serif" font-weight="bold" font-size="20" fill="#00F0FF" letter-spacing="2">AI PLACEMENT MATCH: 98%</text>
+  <rect x="830" y="235" width="55" height="24" rx="4" fill="#00F0FF"/>
+  <text x="840" y="252" font-family="sans-serif" font-weight="bold" font-size="14" fill="#090A0F">LIVE</text>
+  
+  <!-- Simulated product in scene -->
+  <rect x="580" y="300" width="120" height="180" rx="20" fill="#161B29" stroke="#7000FF" stroke-width="4"/>
+  <circle cx="640" cy="360" r="30" fill="#00F0FF" fill-opacity="0.8"/>
+  <text x="640" y="440" font-family="sans-serif" font-weight="bold" font-size="16" fill="#FFFFFF" text-anchor="middle">VoltBook Pro</text>
+
+  <!-- Title Badge -->
+  <rect x="60" y="60" width="460" height="70" rx="12" fill="#090A0F" fill-opacity="0.9" stroke="url(#cyan-glow)" stroke-width="2"/>
+  <text x="80" y="105" font-family="sans-serif" font-weight="900" font-size="30" fill="#FFFFFF">AI SCENE ANALYSIS</text>
+</svg>

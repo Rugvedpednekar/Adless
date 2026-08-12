@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <radialGradient id="monitor-glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg2)"/>
+  <circle cx="640" cy="320" r="380" fill="url(#monitor-glow)"/>
+
+  <!-- Curved Monitor Illustration -->
+  <rect x="340" y="160" width="600" height="300" rx="16" fill="#1E293B" stroke="#38BDF8" stroke-width="4"/>
+  <rect x="360" y="180" width="560" height="260" rx="8" fill="#090D16"/>
+  <rect x="620" y="460" width="40" height="100" fill="#334155"/>
+  <ellipse cx="640" cy="560" rx="120" ry="16" fill="#1E293B"/>
+
+  <!-- Lightbar Glow -->
+  <rect x="380" y="150" width="520" height="10" rx="5" fill="#F8FAFC"/>
+
+  <!-- Title Badge -->
+  <rect x="70" y="70" width="500" height="80" rx="14" fill="#0F172A" fill-opacity="0.9" stroke="#38BDF8" stroke-width="2"/>
+  <text x="100" y="120" font-family="sans-serif" font-weight="900" font-size="32" fill="#F8FAFC">DESK SETUP 2026</text>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B132B"/>
+      <stop offset="100%" stop-color="#1C2541"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg4)"/>
+  <rect x="180" y="140" width="920" height="440" rx="16" fill="#0B0E14" stroke="#48CAE4" stroke-width="2"/>
+  <circle cx="210" cy="170" r="8" fill="#FF5F56"/>
+  <circle cx="235" cy="170" r="8" fill="#FFBD2E"/>
+  <circle cx="260" cy="170" r="8" fill="#27C93F"/>
+
+  <text x="220" y="240" font-family="monospace" font-size="24" fill="#48CAE4">const platform = new AdlessPlatform({</text>
+  <text x="250" y="280" font-family="monospace" font-size="24" fill="#64DFDF">  aiPlacement: true,</text>
+  <text x="250" y="320" font-family="monospace" font-size="24" fill="#64DFDF">  uninterruptedPlayback: true</text>
+  <text x="220" y="360" font-family="monospace" font-size="24" fill="#48CAE4">});</text>
+
+  <rect x="70" y="580" width="540" height="70" rx="12" fill="#00F0FF"/>
+  <text x="100" y="626" font-family="sans-serif" font-weight="900" font-size="28" fill="#090A0F">NEXT.JS + FASTAPI FULL GUIDE</text>
+</svg>

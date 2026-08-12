@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="bg6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064E3B"/>
+      <stop offset="50%" stop-color="#022C22"/>
+      <stop offset="100%" stop-color="#090A0F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg6)"/>
+  
+  <rect x="240" y="220" width="240" height="320" rx="20" fill="#065F46" stroke="#10B981" stroke-width="3"/>
+  <rect x="520" y="180" width="240" height="360" rx="20" fill="#047857" stroke="#34D399" stroke-width="4"/>
+  <rect x="800" y="240" width="240" height="280" rx="20" fill="#065F46" stroke="#10B981" stroke-width="3"/>
+
+  <rect x="80" y="80" width="580" height="80" rx="14" fill="#022C22" stroke="#34D399" stroke-width="2"/>
+  <text x="110" y="132" font-family="sans-serif" font-weight="900" font-size="32" fill="#34D399">TOP 5 TECH GADGETS 2026</text>
+</svg>

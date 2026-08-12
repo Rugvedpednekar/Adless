@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2E0854"/>
+      <stop offset="50%" stop-color="#180B30"/>
+      <stop offset="100%" stop-color="#090A0F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg3)"/>
+  <polygon points="200,600 400,300 600,600" fill="#FF007A" fill-opacity="0.3" stroke="#FF007A" stroke-width="2"/>
+  <polygon points="500,650 750,220 1000,650" fill="#00F0FF" fill-opacity="0.25" stroke="#00F0FF" stroke-width="2"/>
+  
+  <rect x="80" y="80" width="480" height="80" rx="14" fill="#090A0F" stroke="#FF007A" stroke-width="3"/>
+  <text x="110" y="132" font-family="sans-serif" font-weight="900" font-size="34" fill="#FF007A">CYBERCITY 2088</text>
+  
+  <rect x="1060" y="80" width="140" height="48" rx="8" fill="#FF007A"/>
+  <text x="1080" y="112" font-family="sans-serif" font-weight="bold" font-size="20" fill="#FFFFFF">120 FPS</text>
+</svg>
