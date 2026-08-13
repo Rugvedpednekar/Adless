@@ -1,12 +1,12 @@
 import json
 
-from google import genai
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import types
 from pydantic import ValidationError
 
 from app.core.config import settings
 from app.schemas.campaign_selection import CampaignCandidate, SelectedCampaign
+from app.services.google_credentials import create_vertex_client
 
 
 class CampaignSelectionError(RuntimeError):
@@ -48,12 +48,7 @@ Placement confidence: {placement_confidence}
 ClickHouse candidates: {json.dumps([candidate.model_dump() for candidate in candidates])}
 """
         try:
-            client = self._client or genai.Client(
-                vertexai=True,
-                project=settings.GOOGLE_CLOUD_PROJECT,
-                location=settings.GOOGLE_CLOUD_LOCATION,
-                http_options=types.HttpOptions(api_version="v1"),
-            )
+            client = self._client or create_vertex_client()
             response = client.models.generate_content(
                 model=self.model,
                 contents=prompt,

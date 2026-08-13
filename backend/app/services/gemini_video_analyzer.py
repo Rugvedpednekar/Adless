@@ -2,13 +2,13 @@ import json
 from hashlib import sha256
 from pathlib import Path
 
-from google import genai
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import types
 from pydantic import ValidationError
 
 from app.core.config import settings
 from app.schemas.video_analysis import VideoAnalysis
+from app.services.google_credentials import create_vertex_client
 
 
 ANALYSIS_CACHE_DIRECTORY = Path(__file__).resolve().parents[2] / "cache" / "video_analysis"
@@ -84,12 +84,7 @@ class GeminiVideoAnalyzer:
                 return cached
 
         try:
-            client = self._client or genai.Client(
-                vertexai=True,
-                project=self.project,
-                location=self.location,
-                http_options=types.HttpOptions(api_version="v1"),
-            )
+            client = self._client or create_vertex_client()
             response = client.models.generate_content(
                 model=self.model,
                 contents=[

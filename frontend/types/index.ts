@@ -94,6 +94,12 @@ export interface PlacementQAResult {
   reason: string;
   representativeFrameTime: number;
 }
+export interface ManifestProduct{productId:string;brand:string;name:string;category:string;price:string;imageUrl:string;landingPath:string}
+export interface ManifestPlacement{placementId:string;placementIndex:number;campaignId:string;productId:string;startTime:number;endTime:number;surface:string;sceneEnvironment:string;placementConfidence:number;performanceScore:number;product:ManifestProduct;cta:{label:string;showAt:number;hideAt:number;position:string}}
+export interface PlacementManifest{videoId:string;playbackUrl?:string|null;placements:ManifestPlacement[]}
+export type PlacementEventType="placement_impression"|"cta_impression"|"cta_click"|"cta_dismiss"|"placement_exposure_completed";
+export interface ProductDetail{productId:string;brand:string;name:string;category:string;price:string;imageUrl:string;landingPath:string;description:string;compatibleSurfaces:string[];compatibleEnvironments:string[]}
+export interface PlacementAnalyticsSummary{placementImpressions:number;ctaImpressions:number;ctaClicks:number;ctaDismissals:number;exposureCompletions:number;ctaCtr:number}
 
 export interface AIAnalysisState {
   status: "not_analyzed" | "analyzing" | "completed" | "failed" | "ready";

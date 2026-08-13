@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -8,7 +9,8 @@ from app.schemas.video import Creator, Video
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
-VIDEO_CATALOG_PATH = BACKEND_ROOT / "data" / "video_catalog.json"
+VIDEO_CATALOG_PATH = Path(os.getenv("VIDEO_CATALOG_PATH", BACKEND_ROOT / "data" / "video_catalog.json"))
+BOOTSTRAP_CATALOG_PATH = BACKEND_ROOT / "data" / "bootstrap_video_catalog.json"
 VIDEO_CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -84,7 +86,18 @@ VIDEOS: tuple[Video, ...] = (
 
 
 def list_videos() -> tuple[Video, ...]:
-    return (*_load_uploaded_videos(), *VIDEOS)
+    bootstrap = _load_bootstrap_videos() if os.getenv("INCLUDE_BOOTSTRAP_CATALOG", "false").lower() == "true" else ()
+    candidates = (*_load_uploaded_videos(), *bootstrap, *VIDEOS)
+    result: list[Video] = []
+    seen: set[str] = set()
+    for video in candidates:
+        if video.id in seen:
+            continue
+        if video.video_url.startswith("/videos/") and resolve_video_file(video) is None:
+            continue
+        seen.add(video.id)
+        result.append(video)
+    return tuple(result)
 
 
 def get_video(video_id: str) -> Video | None:
@@ -108,6 +121,16 @@ def _load_uploaded_videos() -> tuple[Video, ...]:
 
     try:
         catalog = json.loads(VIDEO_CATALOG_PATH.read_text(encoding="utf-8"))
+        return tuple(Video.model_validate(item) for item in catalog)
+    except (OSError, ValueError):
+        return ()
+
+
+def _load_bootstrap_videos() -> tuple[Video, ...]:
+    if not BOOTSTRAP_CATALOG_PATH.exists():
+        return ()
+    try:
+        catalog = json.loads(BOOTSTRAP_CATALOG_PATH.read_text(encoding="utf-8"))
         return tuple(Video.model_validate(item) for item in catalog)
     except (OSError, ValueError):
         return ()

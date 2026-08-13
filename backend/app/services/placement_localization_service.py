@@ -1,13 +1,13 @@
 import json
 from pathlib import Path
 
-from google import genai
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import types
 from pydantic import ValidationError
 
 from app.core.config import settings
 from app.schemas.placement_preview import PlacementGeometry
+from app.services.google_credentials import create_vertex_client
 
 
 class PlacementLocalizationError(RuntimeError):
@@ -29,12 +29,7 @@ important objects, or the edge of the table. Choose a realistic scale. Rotation 
 Coordinates must come only from this image. If space is limited, use a smaller realistic box.
 """
         try:
-            client = self._client or genai.Client(
-                vertexai=True,
-                project=settings.GOOGLE_CLOUD_PROJECT,
-                location=settings.GOOGLE_CLOUD_LOCATION,
-                http_options=types.HttpOptions(api_version="v1"),
-            )
+            client = self._client or create_vertex_client()
             response = client.models.generate_content(
                 model=self.model,
                 contents=[
@@ -66,4 +61,3 @@ Coordinates must come only from this image. If space is limited, use a smaller r
             return PlacementGeometry.model_validate_json(response.text)
         except (ValidationError, ValueError, TypeError, json.JSONDecodeError) as exc:
             raise PlacementLocalizationError("Gemini returned malformed placement geometry") from exc
-

@@ -1,4 +1,4 @@
-import { NavCategory, PlacementPreview, PlacementQAResult, SelectedCampaign, Video, VideoAnalysis } from "@/types";
+import { ManifestPlacement, NavCategory, PlacementEventType, PlacementManifest, PlacementPreview, PlacementQAResult, SelectedCampaign, Video, VideoAnalysis } from "@/types";
 
 interface ApiCreator {
   id: string;
@@ -20,7 +20,8 @@ interface ApiVideo {
   storage_path?: string | null;
 }
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === "production" ? "" : "http://localhost:8000");
 
 function toVideo(video: ApiVideo): Video {
   const videoSrc = video.video_url.startsWith("/api/")
@@ -366,3 +367,9 @@ export async function runPlacementQA(
     representativeFrameTime: result.representative_frame_time,
   };
 }
+
+export async function saveCreatorDecision(videoId:string,placementIndex:number,approved:boolean){const response=await fetch(`${apiUrl}/api/videos/${encodeURIComponent(videoId)}/placements/${placementIndex}/creator-decision`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({approved})});if(!response.ok)throw new Error("Creator decision could not be saved");return response.json()}
+export async function getPlacementManifest(videoId:string):Promise<PlacementManifest>{const response=await fetch(`${apiUrl}/api/videos/${encodeURIComponent(videoId)}/placement-manifest`);if(!response.ok)throw new Error("Placement manifest unavailable");const data=await response.json();return{videoId:data.video_id,playbackUrl:data.playback_url?`${apiUrl}${data.playback_url}`:null,placements:data.placements.map((p:any)=>({placementId:p.placement_id,placementIndex:p.placement_index,campaignId:p.campaign_id,productId:p.product_id,startTime:p.start_time,endTime:p.end_time,surface:p.surface,sceneEnvironment:p.scene_environment,placementConfidence:p.placement_confidence,performanceScore:p.performance_score,product:{productId:p.product.product_id,brand:p.product.brand,name:p.product.name,category:p.product.category,price:p.product.price,imageUrl:p.product.image_url,landingPath:p.product.landing_path},cta:{label:p.cta.label,showAt:p.cta.show_at,hideAt:p.cta.hide_at,position:p.cta.position}}))}}
+export async function recordPlacementEvent(eventType:PlacementEventType,videoId:string,placement:ManifestPlacement,viewerSessionId:string,playbackSecond:number){try{await fetch(`${apiUrl}/api/analytics/placement-events`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_type:eventType,video_id:videoId,placement_id:placement.placementId,campaign_id:placement.campaignId,product_id:placement.productId,viewer_session_id:viewerSessionId,playback_second:playbackSecond,placement_start:placement.startTime,placement_end:placement.endTime,cta_show:placement.cta.showAt,cta_hide:placement.cta.hideAt,surface:placement.surface,scene_environment:placement.sceneEnvironment,market:"US"})})}catch{/* Analytics never interrupts playback. */}}
+export async function getProduct(productId:string):Promise<import("@/types").ProductDetail>{const response=await fetch(`${apiUrl}/api/products/${encodeURIComponent(productId)}`);if(!response.ok)throw new Error("Product not found");const p=await response.json();return{productId:p.product_id,brand:p.brand,name:p.product_name,category:p.category,price:p.price,imageUrl:p.thumbnail,landingPath:p.landing_path,description:p.description,compatibleSurfaces:p.compatible_surfaces,compatibleEnvironments:p.compatible_environments}}
+export async function getPlacementAnalyticsSummary():Promise<import("@/types").PlacementAnalyticsSummary>{const response=await fetch(`${apiUrl}/api/analytics/placement-events/summary`);if(!response.ok)throw new Error("Placement metrics unavailable");const s=await response.json();return{placementImpressions:s.placement_impressions,ctaImpressions:s.cta_impressions,ctaClicks:s.cta_clicks,ctaDismissals:s.cta_dismissals,exposureCompletions:s.exposure_completions,ctaCtr:s.cta_ctr}}

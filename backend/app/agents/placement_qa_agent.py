@@ -4,7 +4,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import imageio_ffmpeg
-from google import genai
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import types
 from pydantic import ValidationError
@@ -14,6 +13,7 @@ from app.schemas.campaign_selection import SelectedCampaign
 from app.schemas.placement_preview import ProductPlacementPreview
 from app.schemas.placement_qa import PlacementQAResult
 from app.services.storage_service import GCSStorageService, StorageOperationError
+from app.services.google_credentials import create_vertex_client
 
 
 class PlacementQAError(RuntimeError):
@@ -112,12 +112,7 @@ The representative frame timestamp field may be zero in your response because th
 replace it with the exact extracted timestamp.
 """
         try:
-            client = self._client or genai.Client(
-                vertexai=True,
-                project=settings.GOOGLE_CLOUD_PROJECT,
-                location=settings.GOOGLE_CLOUD_LOCATION,
-                http_options=types.HttpOptions(api_version="v1"),
-            )
+            client = self._client or create_vertex_client()
             response = client.models.generate_content(
                 model=self.model,
                 contents=[
@@ -146,4 +141,3 @@ replace it with the exact extracted timestamp.
             return PlacementQAResult.model_validate_json(response.text)
         except (ValidationError, ValueError, TypeError, json.JSONDecodeError) as exc:
             raise PlacementQAValidationError("Gemini returned malformed placement QA") from exc
-

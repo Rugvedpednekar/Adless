@@ -1,0 +1,19 @@
+[
+  {
+    "id": "original-living-room-ai-demo-dbfa4523",
+    "title": "Original Living Room AI Demo",
+    "creator": {
+      "id": "adless-original",
+      "name": "Adless Original",
+      "avatar_url": "/assets/avatar-2.svg",
+      "verified": true
+    },
+    "description": "Original synthetic living-room footage created for licensed Gemini verification.",
+    "video_url": "/api/videos/original-living-room-ai-demo-dbfa4523/stream",
+    "duration": "0:06",
+    "category": "Film",
+    "views": "0 views",
+    "upload_date": "2026-08-12",
+    "storage_path": "gs://adless-media-2026/videos/original-living-room-ai-demo-dbfa4523/original-living-room.mp4"
+  }
+]

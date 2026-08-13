@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.videos import router as videos_router
+from app.api.analytics import router as analytics_router
+from app.api.products import router as products_router
 from app.core.config import settings
 
 app = FastAPI(
@@ -19,6 +21,8 @@ app.add_middleware(
 )
 
 app.include_router(videos_router, prefix=settings.API_PREFIX)
+app.include_router(analytics_router, prefix=settings.API_PREFIX)
+app.include_router(products_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/health", tags=["System"])

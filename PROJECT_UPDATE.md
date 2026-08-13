@@ -19,9 +19,67 @@ This document is the running development record for **Adless**. It tracks what h
 - **Partner:** ClickHouse
 - **Primary AI:** Gemini
 - **Google Cloud project:** `adless-ai-2026`
-- **Current phase:** Placement QA Agent (real rendered-frame Gemini review verified)
+- **Current phase:** Railway single-container production deployment implemented and locally verified
 
 ## Updates
+
+## 2026-08-13 — Railway Single-Service Production Container
+
+### Status
+
+🟢 **Completed and locally verified**
+
+Implemented the requested one-repository → one Railway service → one Docker container → one public domain architecture. The root multi-stage `Dockerfile` builds the real Next.js application with `npm ci` and `npm run build`, installs FastAPI and its Python dependencies, FFmpeg, OpenCV runtime dependencies, nginx, and `tini`, and runs the container as an unprivileged user. Next.js listens only on `127.0.0.1:3000`, FastAPI on `127.0.0.1:8000`, and nginx alone listens on Railway's injected `$PORT`.
+
+nginx sends `/api/*` and `/health` to FastAPI and all other routes to the standalone Next.js production server. API proxy buffering and request buffering are disabled, upload timeouts are extended, and Range/If-Range headers are preserved for private GCS and preview video seeking. The guarded entrypoint supervises all three critical processes and terminates the container when any one exits. `railway.toml` selects the root Dockerfile and configures `/health` with an on-failure restart policy.
+
+Production frontend API requests are same-origin (`/api`) without a hard-coded Railway domain; local development continues to default to `http://localhost:8000`. Google integrations support local ADC when no deployment secret is present and environment-provided service-account credentials through `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64` on Railway. No credential JSON is written to disk or included in the Docker build context. A tracked, non-secret bootstrap catalog entry exposes the original private-GCS living-room demo in a clean deployment; uploaded catalog metadata remains ephemeral unless `/var/lib/adless` is backed by a Railway volume.
+
+### Local Docker Verification
+
+```text
+docker build -t adless .                                      PASS
+container public endpoint                                    http://localhost:8080
+/                                                            200
+/health                                                      200
+/api/videos                                                  200
+/watch/original-living-room-ai-demo-dbfa4523                 200
+/studio                                                      200
+/studio/videos/original-living-room-ai-demo-dbfa4523         200
+private GCS Range bytes=0-1023                               206
+Content-Range                                                 bytes 0-1023/4156218
+browser media readyState                                      4
+browser media error                                           none
+browser console errors                                        none
+```
+
+Regression verification: backend **37 passed**; frontend production/standalone build **passed** with 13 routes; TypeScript **passed**. The final Docker image is approximately 1.76 GB and includes the required media-processing runtime.
+
+### ClickHouse MCP Deployment Blocker
+
+Campaign selection still invokes the official ClickHouse Remote MCP through the locally installed Codex CLI and its interactive desktop OAuth credential store. Neither that CLI nor its OAuth session is copied into the image. This cannot run non-interactively on Railway until the official MCP server provides a production OAuth flow suitable for a server workload (for example, a securely provisioned refresh-token/client flow or supported workload/service identity). The endpoint fails honestly and no direct ClickHouse campaign query or fake result was added. The separate optional ClickHouse HTTP credentials apply only to placement-event analytics, not campaign selection.
+
+### Files Added
+
+`Dockerfile`, `.dockerignore`, `railway.toml`, `deploy/nginx.conf.template`, `deploy/entrypoint.sh`, `backend/app/services/google_credentials.py`, and `backend/data/bootstrap_video_catalog.json`.
+
+`PROJECT_BLUEPRINT.md` was not modified for this deployment milestone because the product architecture remains unchanged; Railway is a packaging/deployment target for the existing Next.js and FastAPI applications.
+
+## 2026-08-13 — Shoppable Contextual Placement MVP
+
+### Status
+
+🟡 **Implemented and locally verified; ClickHouse event persistence externally blocked**
+
+Extended the approved Gemini → ClickHouse campaign → localization → render → QA pipeline into a viewer-facing shoppable experience. Creator approval is now persisted locally and is required before a placement is included in `GET /api/videos/{video_id}/placement-manifest`. The manifest exposes the private rendered preview and a deterministic CTA window based on actual scene timestamps; placements shorter than four seconds are excluded.
+
+The watch player now uses the real media playhead to show one responsive sponsored-product CTA, records impression/click/dismiss/exposure events without interrupting playback, keeps dismissed CTAs closed after seeking, and routes Buy Now to a fictional product detail page. Creator Studio provides a viewer preview mode with analytics disabled and displays real placement metrics or explicit zero values—never fabricated metrics. The removed Analytics and Monetization navigation sections remain removed, and the obsolete Studio Analytics route was deleted.
+
+Added a ten-item fictional product catalog, product APIs, ClickHouse `placement_events` DDL, and a fictional campaign expansion seed. The official connected ClickHouse Remote MCP currently exposes read-only SELECT tools only, while the backend has no `CLICKHOUSE_HOST`, `CLICKHOUSE_USERNAME`, or `CLICKHOUSE_PASSWORD` configuration. Therefore the table/seed and live event writes could not be applied or verified against ClickHouse Cloud in this session. Playback correctly continues when analytics storage is unavailable.
+
+Verification: backend suite **37 passed**; frontend production build **passed**; TypeScript check **passed**. Live API returned one approved CrunchPop manifest with preview playback and CTA timing `00:01.5–00:04.0`. Browser verification passed for desktop CTA display, dismissal, seek-back non-reappearance, Buy Now navigation, fictional product page, and the 390×844 mobile CTA. No browser console errors occurred; one non-fatal Next.js LCP optimization warning was observed on the product image.
+
+No credentials, payment processing, checkout, new AI provider, PostgreSQL, or publication automation were added.
 
 ## 2026-08-12 — Functional Viewer Library and Profile
 

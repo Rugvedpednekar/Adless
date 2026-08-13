@@ -40,6 +40,7 @@ backend/cache/video_analysis/
 backend/cache/clickhouse_mcp/
 backend/cache/campaign_selections/
 backend/cache/placement_previews/
+backend/cache/placement_approvals/
 backend/data/video_catalog.json
 backend/credentials/
 **/*service-account*.json

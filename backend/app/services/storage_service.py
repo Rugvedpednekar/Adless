@@ -8,6 +8,10 @@ from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
 
 from app.core.config import settings
+from app.services.google_credentials import (
+    GoogleCredentialsConfigurationError,
+    environment_credentials,
+)
 
 
 class StorageError(RuntimeError):
@@ -54,9 +58,10 @@ class GCSStorageService:
         self.bucket_name = bucket_name
         self.project = project
         try:
-            self.client = client or storage.Client(project=project)
+            credentials = environment_credentials()
+            self.client = client or storage.Client(project=project, credentials=credentials)
             self.bucket = self.client.bucket(bucket_name)
-        except DefaultCredentialsError as exc:
+        except (DefaultCredentialsError, GoogleCredentialsConfigurationError) as exc:
             raise StorageConfigurationError(
                 "Google Application Default Credentials are not configured"
             ) from exc

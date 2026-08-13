@@ -1,0 +1,10 @@
+"use client";
+import Image from "next/image";
+import Link from "next/link";
+import {useParams} from "next/navigation";
+import {useEffect,useState} from "react";
+import {ArrowLeft,CheckCircle2,ShoppingBag} from "lucide-react";
+import {ViewerShell} from "@/components/navigation/ViewerShell";
+import {getProduct} from "@/services/video-service";
+import {ProductDetail} from "@/types";
+export default function ProductPage(){const{productId}=useParams<{productId:string}>(),[product,setProduct]=useState<ProductDetail|null>(null),[error,setError]=useState(false);useEffect(()=>{getProduct(productId).then(setProduct).catch(()=>setError(true))},[productId]);return <ViewerShell><main className="mx-auto max-w-5xl px-4 py-8"><Link href="/" className="inline-flex items-center gap-2 text-sm text-[#aaa] hover:text-white"><ArrowLeft className="h-4 w-4"/>Back to videos</Link>{!product?<div className="grid min-h-[55vh] place-items-center text-[#aaa]">{error?"Product not found.":"Loading product…"}</div>:<section className="mt-7 grid overflow-hidden rounded-2xl border border-border bg-surface md:grid-cols-2"><div className="relative min-h-[340px] bg-[#202020]"><Image src={product.imageUrl} alt={product.name} fill className="object-cover" unoptimized/></div><div className="p-7 md:p-10"><p className="text-xs font-semibold uppercase tracking-[.2em] text-adless-cyan">Contextual product</p><h1 className="font-display mt-3 text-3xl font-semibold">{product.name}</h1><p className="mt-2 text-[#aaa]">by {product.brand}</p><p className="mt-6 text-2xl font-semibold">{product.price}</p><p className="mt-5 leading-7 text-[#bbb]">{product.description}</p><div className="mt-7 flex items-center gap-2 rounded-xl bg-adless-cyan/10 p-3 text-sm text-adless-cyan"><CheckCircle2 className="h-4 w-4"/>Fictional demonstration product</div><button className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-adless-cyan font-bold text-black"><ShoppingBag className="h-5 w-5"/>Continue to checkout</button><p className="mt-3 text-center text-xs text-[#777]">Checkout is outside this MVP and no payment will be taken.</p></div></section>}</main></ViewerShell>}

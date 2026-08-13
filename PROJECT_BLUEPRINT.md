@@ -772,6 +772,28 @@ No traditional advertisement break is required for the demo.
 
 # 21. Dynamic Campaign Demo
 
+## Shoppable Contextual Placements
+
+Approved contextual placements extend the existing rendered-video pipeline with a separate, player-controlled interactive layer:
+
+```text
+Approved Creator Placement
+        ↓
+Placement Manifest
+        ↓
+Adless Video Player
+        ↓
+Timed Sponsored Product CTA
+        ↓
+Viewer Interaction
+        ↓
+ClickHouse Analytics
+```
+
+The product remains visually composited into the video by the existing Gemini localization and OpenCV/FFmpeg rendering pipeline. Sponsored CTA controls are never burned into the MP4; they are rendered by the Next.js player from a validated placement manifest and respond to actual playback time. Only creator-approved placements may enter a viewer manifest—Gemini QA approval alone is insufficient. Anonymous placement impression, exposure, CTA impression, click, and dismiss events are recorded in ClickHouse through the FastAPI backend. Checkout and payment processing remain outside the MVP.
+
+---
+
 One important hackathon demo feature should be the ability to change market.
 
 Example:

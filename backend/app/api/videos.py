@@ -19,6 +19,7 @@ from app.schemas.video_analysis import VideoAnalysis
 from app.schemas.campaign_selection import CampaignSelectionRequest, SelectedCampaign
 from app.schemas.placement_preview import ProductPlacementPreview
 from app.schemas.placement_qa import PlacementQAResult
+from app.schemas.placement_manifest import CreatorPlacementDecision, PlacementManifest
 from app.agents.placement_qa_agent import (
     PlacementQAAgent,
     PlacementQAError,
@@ -49,6 +50,8 @@ from app.services.placement_localization_service import (
     PlacementLocalizationService,
 )
 from app.services.product_catalog import get_product_asset
+from app.services.placement_approval_service import set_approval
+from app.services.placement_manifest_service import build_manifest
 from app.services.product_placement_service import (
     ProductPlacementError,
     ProductPlacementService,
@@ -463,6 +466,23 @@ async def run_placement_qa(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except PlacementQAError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+@router.post("/{video_id}/placements/{placement_index}/creator-decision")
+async def creator_decision(video_id:str,placement_index:int,decision:CreatorPlacementDecision):
+    if get_video(video_id) is None:raise HTTPException(status_code=404,detail="Video not found")
+    if get_cached_preview(video_id,placement_index) is None:raise HTTPException(status_code=409,detail="Render a placement preview before creator approval")
+    if get_selected_campaign(video_id,placement_index) is None:raise HTTPException(status_code=409,detail="Select a campaign before creator approval")
+    set_approval(video_id,placement_index,decision.approved)
+    return {"approved":decision.approved}
+
+@router.get("/{video_id}/placement-manifest",response_model=PlacementManifest)
+async def placement_manifest(video_id:str,analyzer:Annotated[GeminiVideoAnalyzer,Depends(get_gemini_analyzer)]):
+    video=get_video(video_id)
+    if video is None:raise HTTPException(status_code=404,detail="Video not found")
+    if not video.storage_path:return PlacementManifest(video_id=video_id,placements=[])
+    analysis=analyzer.get_cached_analysis(video_id=video_id,gcs_uri=video.storage_path)
+    if analysis is None:return PlacementManifest(video_id=video_id,placements=[])
+    return build_manifest(video_id,analysis)
 
 
 @router.get("/{video_id}", response_model=Video)
