@@ -9,26 +9,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#090A0F",
+        background: "#0F0F0F",
         surface: {
-          DEFAULT: "#121520",
-          hover: "#1A1E2E",
-          card: "#161926",
-          border: "#23283B",
+          DEFAULT: "#181818",
+          hover: "#272727",
+          card: "#181818",
+          border: "#303030",
         },
         adless: {
-          cyan: "#00F0FF",
-          purple: "#8A2BE2",
-          pink: "#FF007A",
-          muted: "#94A3B8",
+          cyan: "#20E3B2",
+          purple: "#20E3B2",
+          pink: "#20E3B2",
+          muted: "#AAAAAA",
         },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        "glow-cyan": "0 0 20px rgba(0, 240, 255, 0.15)",
-        "glow-purple": "0 0 20px rgba(138, 43, 226, 0.15)",
+        "glow-cyan": "0 8px 24px rgba(0, 0, 0, 0.28)",
+        "glow-purple": "0 8px 24px rgba(0, 0, 0, 0.28)",
       },
     },
   },

@@ -1,66 +1,10 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Film, Plus, Upload } from "lucide-react";
-
-import { getVideos } from "@/services/video-service";
-import { Video } from "@/types";
-
-export default function StudioPage() {
-  const [videos, setVideos] = useState<Video[]>([]);
-
-  useEffect(() => {
-    getVideos().then(setVideos).catch(() => setVideos([]));
-  }, []);
-
-  return (
-    <main className="min-h-screen bg-background px-4 py-8 text-slate-100 sm:px-8">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <Link href="/" className="mb-4 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-adless-cyan">
-              <ArrowLeft className="h-4 w-4" /> Back to Adless
-            </Link>
-            <h1 className="text-3xl font-extrabold">Creator Studio</h1>
-            <p className="mt-2 text-sm text-slate-400">Manage locally uploaded development videos.</p>
-          </div>
-          <Link href="/studio/upload" className="inline-flex items-center gap-2 rounded-xl bg-adless-cyan px-5 py-3 text-sm font-bold text-slate-950 shadow-glow-cyan">
-            <Plus className="h-4 w-4" /> Upload video
-          </Link>
-        </div>
-
-        <section className="rounded-2xl border border-surface-border bg-surface/60 p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="rounded-xl border border-adless-cyan/30 bg-adless-cyan/10 p-2 text-adless-cyan">
-              <Film className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-bold">Video catalog</h2>
-              <p className="text-xs text-slate-500">{videos.length} videos currently available</p>
-            </div>
-          </div>
-
-          {videos.length ? (
-            <div className="divide-y divide-surface-border">
-              {videos.map((video) => (
-                <Link key={video.id} href={`/studio/videos/${video.id}`} className="flex items-center justify-between gap-4 py-4 hover:text-adless-cyan">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{video.title}</p>
-                    <p className="mt-1 text-xs text-slate-500">{video.creator.name} · {video.category} · {video.uploadedAt}</p>
-                  </div>
-                  <span className="shrink-0 text-xs text-slate-500">{video.duration}</span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center py-10 text-center text-slate-400">
-              <Upload className="mb-3 h-8 w-8" />
-              <p className="text-sm">The catalog is loading or the backend is unavailable.</p>
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
-  );
-}
+import {useEffect,useState} from "react";
+import {Clock,Eye,Sparkles,Upload,Users,Wallet} from "lucide-react";
+import {StudioShell} from "@/components/navigation/StudioShell";
+import {StudioMetric} from "@/components/studio/StudioMetric";
+import {VideoThumbnail} from "@/components/video/VideoThumbnail";
+import {getVideos} from "@/services/video-service";
+import {Video} from "@/types";
+export default function StudioPage(){const[videos,setVideos]=useState<Video[]>([]);useEffect(()=>{getVideos().then(setVideos).catch(()=>setVideos([]))},[]);return <StudioShell><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-display text-2xl font-semibold">Good evening, Rugved</h1><p className="mt-1 text-sm text-muted-foreground">Here&apos;s how your content is performing.</p></div><Link href="/studio/upload" className="flex h-10 items-center gap-2 rounded-full bg-adless-cyan px-5 text-sm font-semibold text-black"><Upload className="h-4 w-4"/>Upload Video</Link></div><div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><StudioMetric label="Total Views" value="12.4K" delta="+18% vs last 28 days" icon={Eye}/><StudioMetric label="Watch Time" value="438 hrs" delta="+9% vs last 28 days" icon={Clock}/><StudioMetric label="Subscribers" value="1,284" delta="+142 this month" icon={Users}/><StudioMetric label="AI Placement Impressions" value="3.8K" delta="+24% vs last 28 days" icon={Sparkles} accent/><StudioMetric label="Estimated Revenue" value="$—" delta="Available after publication" icon={Wallet}/></div><section className="mt-10"><div className="flex items-center justify-between"><h2 className="font-display text-lg font-semibold">Recent videos</h2><Link href="/studio/content" className="text-sm text-adless-cyan hover:underline">View all content</Link></div><div className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">{videos.map(video=><Link key={video.id} href={`/studio/videos/${video.id}`} className="flex flex-wrap items-center gap-4 p-4 transition hover:bg-elevated"><div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-lg"><VideoThumbnail thumbnailUrl={video.thumbnailUrl} videoSrc={video.videoSrc} alt={video.title}/></div><div className="min-w-[12rem] flex-1"><p className="line-clamp-1 text-sm font-semibold">{video.title}</p><p className="mt-1 text-xs text-muted-foreground">Published {video.uploadedAt}</p></div><span className="rounded-md bg-adless-cyan/10 px-2.5 py-1 text-xs text-adless-cyan">{video.storagePath?"AI ready":"Published"}</span><div className="w-20 text-sm text-muted-foreground">{video.views}</div></Link>)}{!videos.length&&<p className="p-10 text-center text-sm text-muted-foreground">No videos yet.</p>}</div></section></StudioShell>}

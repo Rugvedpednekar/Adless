@@ -1,0 +1,4 @@
+"use client";
+import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
+export function VideoPlayer({src,poster,title}:{src:string;poster?:string;title:string}){const[error,setError]=useState(false);return <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">{error?<div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-[#aaa]"><AlertTriangle className="h-8 w-8"/><p className="font-semibold text-white">This video could not be played.</p><p className="text-sm">Please try again or return to the video catalog.</p></div>:<video key={src} controls preload="metadata" poster={poster} onError={()=>setError(true)} aria-label={title} className="h-full w-full object-contain"><source src={src} type="video/mp4"/></video>}</div>}

@@ -1,0 +1,1 @@
+import {LibraryPage} from "@/components/viewer/LibraryPage";export default function Page(){return <LibraryPage list="history" title="Watch history" description="Videos you recently watched on Adless."/>}

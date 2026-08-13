@@ -1,128 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, FileVideo, UploadCloud } from "lucide-react";
-
+import { CheckCircle2, FileVideo, UploadCloud } from "lucide-react";
+import { StudioShell } from "@/components/navigation/StudioShell";
 import { uploadVideo } from "@/services/video-service";
 import { NavCategory } from "@/types";
 
-const UPLOAD_CATEGORIES: Exclude<NavCategory, "All">[] = [
-  "Technology",
-  "Gaming",
-  "Entertainment",
-  "AI & Future",
-  "Lifestyle",
-];
+const CATEGORIES: Exclude<NavCategory,"All"|"Recently Uploaded">[]=["Technology","Gaming","Entertainment","AI & Future","Lifestyle","Design","Film","Travel","Music"];
 
-export default function UploadPage() {
-  const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [creator, setCreator] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Exclude<NavCategory, "All">>("Lifestyle");
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!file || file.type !== "video/mp4") {
-      setStatus("error");
-      setMessage("Choose an MP4 video file before uploading.");
-      return;
-    }
-
-    setStatus("uploading");
-    setProgress(0);
-    setMessage("Uploading video to local development storage...");
-
-    try {
-      const video = await uploadVideo(
-        { file, title, creator, description, category },
-        setProgress
-      );
-      setStatus("success");
-      setProgress(100);
-      setMessage("Upload complete. Opening the refreshed catalog...");
-      router.push(`/?uploaded=${encodeURIComponent(video.id)}`);
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Upload failed.");
-    }
-  };
-
-  return (
-    <main className="min-h-screen bg-background px-4 py-8 text-slate-100 sm:px-8">
-      <div className="mx-auto max-w-3xl">
-        <Link href="/studio" className="mb-5 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-adless-cyan">
-          <ArrowLeft className="h-4 w-4" /> Creator Studio
-        </Link>
-
-        <div className="rounded-3xl border border-surface-border bg-gradient-to-br from-surface-card to-background p-6 shadow-2xl sm:p-8">
-          <div className="mb-7">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-adless-cyan/30 bg-adless-cyan/10 px-3 py-1 text-xs font-semibold text-adless-cyan">
-              <UploadCloud className="h-4 w-4" /> Local development upload
-            </div>
-            <h1 className="text-2xl font-extrabold">Upload a video</h1>
-            <p className="mt-2 text-sm text-slate-400">Add an MP4 to the local Adless catalog and publish its watch page.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <label className="block rounded-2xl border border-dashed border-slate-600 bg-slate-950/40 p-6 text-center hover:border-adless-cyan/60">
-              <FileVideo className="mx-auto mb-3 h-8 w-8 text-adless-cyan" />
-              <span className="block text-sm font-semibold">{file ? file.name : "Choose an MP4 video"}</span>
-              <span className="mt-1 block text-xs text-slate-500">Only .mp4 files are accepted</span>
-              <input
-                type="file"
-                accept="video/mp4,.mp4"
-                required
-                className="sr-only"
-                onChange={(event) => setFile(event.target.files?.[0] || null)}
-              />
-            </label>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Title">
-                <input required maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} className="form-input" placeholder="My new video" />
-              </Field>
-              <Field label="Creator name">
-                <input required maxLength={100} value={creator} onChange={(event) => setCreator(event.target.value)} className="form-input" placeholder="Creator name" />
-              </Field>
-            </div>
-
-            <Field label="Description">
-              <textarea required maxLength={2000} rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="form-input resize-none" placeholder="Tell viewers about this video" />
-            </Field>
-
-            <Field label="Category">
-              <select value={category} onChange={(event) => setCategory(event.target.value as Exclude<NavCategory, "All">)} className="form-input">
-                {UPLOAD_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-            </Field>
-
-            {status !== "idle" && (
-              <div className={`rounded-xl border p-4 ${status === "error" ? "border-red-500/30 bg-red-500/10 text-red-200" : "border-adless-cyan/30 bg-adless-cyan/10 text-slate-200"}`}>
-                <div className="mb-2 flex items-center justify-between text-xs font-semibold">
-                  <span className="flex items-center gap-2">{status === "success" && <CheckCircle2 className="h-4 w-4 text-emerald-400" />}{message}</span>
-                  {status !== "error" && <span>{progress}%</span>}
-                </div>
-                {status !== "error" && <div className="h-2 overflow-hidden rounded-full bg-slate-900"><div className="h-full bg-gradient-to-r from-adless-cyan to-blue-600 transition-all" style={{ width: `${progress}%` }} /></div>}
-              </div>
-            )}
-
-            <button disabled={status === "uploading" || status === "success"} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-adless-cyan to-blue-600 px-5 py-3 text-sm font-extrabold text-slate-950 shadow-glow-cyan disabled:cursor-not-allowed disabled:opacity-60">
-              <UploadCloud className="h-5 w-5" /> {status === "uploading" ? "Uploading..." : "Upload video"}
-            </button>
-          </form>
-        </div>
-      </div>
-    </main>
-  );
+export default function UploadPage(){
+  const router=useRouter();
+  const[file,setFile]=useState<File|null>(null); const[title,setTitle]=useState(""); const[creator,setCreator]=useState("");
+  const[description,setDescription]=useState(""); const[category,setCategory]=useState<Exclude<NavCategory,"All">>("Lifestyle");
+  const[visibility,setVisibility]=useState("Public"); const[progress,setProgress]=useState(0);
+  const[status,setStatus]=useState<"idle"|"uploading"|"success"|"error">("idle"); const[message,setMessage]=useState("");
+  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!file||file.type!=="video/mp4"){setStatus("error");setMessage("Choose an MP4 video file before uploading.");return}setStatus("uploading");setMessage("Uploading securely to Adless cloud storage...");setProgress(0);try{const video=await uploadVideo({file,title,creator,description,category},setProgress);setStatus("success");setProgress(100);setMessage("Upload complete. Opening your video in Studio...");router.push(`/studio/videos/${video.id}`)}catch(error){setStatus("error");setMessage(error instanceof Error?error.message:"Upload failed.")}}
+  return <StudioShell title="Upload videos"><div className="mx-auto max-w-5xl"><form onSubmit={submit} className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><section className="rounded-xl border border-[#303030] bg-[#181818] p-6"><label className="grid min-h-64 cursor-pointer place-items-center rounded-xl border border-dashed border-[#505050] bg-[#111] p-8 text-center hover:border-adless-cyan"><div><span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#292929]"><UploadCloud className="h-6 w-6"/></span><p className="mt-5 font-semibold">{file?file.name:"Drag and drop a video file to upload"}</p><p className="mt-2 text-sm text-[#888]">Your video will remain private until you publish it.</p><span className="mt-5 inline-flex h-10 items-center rounded-lg bg-[#f1f1f1] px-4 text-sm font-semibold text-black">Select file</span></div><input type="file" accept="video/mp4,.mp4" required className="sr-only" onChange={event=>setFile(event.target.files?.[0]||null)}/></label>{file&&<div className="mt-5 flex items-center gap-3 rounded-lg bg-[#222] p-3"><FileVideo className="h-5 w-5 text-adless-cyan"/><div className="min-w-0"><p className="truncate text-sm font-semibold">{file.name}</p><p className="text-xs text-[#888]">{(file.size/1024/1024).toFixed(1)} MB · MP4</p></div></div>}</section><section className="rounded-xl border border-[#303030] bg-[#181818] p-6"><h2 className="font-semibold">Video details</h2><div className="mt-5 space-y-5"><Field label="Title"><input required maxLength={200} value={title} onChange={e=>setTitle(e.target.value)} className="form-input" placeholder="Add a title that describes your video"/></Field><Field label="Creator name"><input required maxLength={100} value={creator} onChange={e=>setCreator(e.target.value)} className="form-input" placeholder="Creator name"/></Field><Field label="Description"><textarea required maxLength={2000} rows={5} value={description} onChange={e=>setDescription(e.target.value)} className="form-input resize-none" placeholder="Tell viewers about your video"/></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Category"><select value={category} onChange={e=>setCategory(e.target.value as Exclude<NavCategory,"All">)} className="form-input">{CATEGORIES.map(item=><option key={item}>{item}</option>)}</select></Field><Field label="Visibility"><select value={visibility} onChange={e=>setVisibility(e.target.value)} className="form-input"><option>Public</option><option>Unlisted</option><option>Private</option></select></Field></div></div>{status!=="idle"&&<div className={`mt-5 rounded-lg p-4 text-sm ${status==="error"?"bg-red-500/10 text-red-300":"bg-adless-cyan/10 text-[#ddd]"}`}><p className="flex items-center gap-2">{status==="success"&&<CheckCircle2 className="h-4 w-4 text-emerald-300"/>}{message}</p>{status!=="error"&&<div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#333]"><div className="h-full bg-adless-cyan transition-all" style={{width:`${progress}%`}}/></div>}</div>}<button disabled={status==="uploading"||status==="success"} className="mt-6 h-11 w-full rounded-lg bg-adless-cyan text-sm font-semibold text-black disabled:opacity-50">{status==="uploading"?`Uploading ${progress}%`:"Upload video"}</button></section></form></div></StudioShell>;
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</span>{children}</label>;
-}
+function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block"><span className="mb-2 block text-sm font-medium text-[#bbb]">{label}</span>{children}</label>}

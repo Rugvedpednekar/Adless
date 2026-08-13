@@ -23,6 +23,98 @@ This document is the running development record for **Adless**. It tracks what h
 
 ## Updates
 
+## 2026-08-12 — Functional Viewer Library and Profile
+
+### Status
+
+🟢 **Completed**
+
+Added working Explore, Profile, Watch History, Watch Later, and Liked Videos routes. Removed the viewer Subscriptions and Notifications controls. The profile avatar now opens an account menu with profile details and working navigation. Opening a video records it in history; Like and Save update persistent browser-backed viewer lists and their dedicated pages. Share copies the current watch URL. The existing catalog and playback APIs remain unchanged.
+
+Verification: production build passed with 14 routes; browser navigation passed for all five new pages; profile menu opened correctly; Like, Save, and History each persisted the selected `gaming-room-tour` video; no browser console errors were observed.
+
+## 2026-08-12 — Lovable Design Migration
+
+### Status
+
+🟢 **Completed**
+
+### Summary
+
+Migrated the finished Lovable visual design from `D:\Rugved\adless-studio-frontend-main` into the real Next.js frontend while retaining the Adless frontend as the functional source of truth. TanStack Router, Lovable runtime packages, mock catalogs, mock workflow timers, and Lovable-only backend concepts were not copied. The existing Next.js routes, `video-service.ts`, typed models, FastAPI contracts, real GCS upload/playback, Gemini analysis, ClickHouse MCP campaign selection, placement rendering, Gemini QA, and creator review state remain in use.
+
+### Lovable Design Elements Reused
+
+- Semantic cinematic dark palette and restrained Adless teal accent
+- Original Adless SVG mark and typography hierarchy
+- Viewer header, search, sidebar grouping, mobile navigation, and creator message card
+- Video-card hover treatment, play affordance, rounded thumbnails, and discovery sections
+- Studio header/sidebar structure, greeting, metric cards, content tables, and responsive spacing
+- Five-step workflow cards, campaign intelligence presentation, Before/After treatment, QA presentation, and separate dashed creator-approval panel
+
+### Architecture Decisions
+
+- Kept Next.js 14, React 18, and Tailwind CSS 3; did not import the Lovable TanStack Start, React 19, Tailwind 4, Radix, or mock-data architecture.
+- Added no Supabase, Firebase, authentication backend, Edge Functions, databases, or third-party AI providers.
+- Preserved all required URLs and backend endpoints.
+- Split creator approval into a reusable component so Gemini approval remains visibly and functionally separate.
+
+### Verification
+
+- Frontend production build: **passed** — compilation, lint, TypeScript, and all 9 generated routes.
+- Backend regression suite: **33 passed**.
+- Browser route checks: homepage, watch/playback, recommendations, Studio dashboard, content, upload, analytics, placements, and video detail passed.
+- Responsive checks: homepage and Studio workflow passed at 390 × 844 with no horizontal overflow.
+- Real demo workflow for `original-living-room-ai-demo-dbfa4523`: Gemini analysis returned the living-room coffee-table opportunity; the real ClickHouse-backed endpoint selected CrunchPop with performance 8.8, 91% success, 6.8-second exposure, and 95% Gemini confidence; the rendered Before/After preview loaded; real Gemini QA returned Needs Adjustment at 75% due to an insufficient contact shadow; Creator Approval remained a separate manual action.
+- Browser console errors: none.
+- Credentials or new secret-bearing files introduced: none.
+- `PROJECT_BLUEPRINT.md`: unchanged.
+
+### Remaining Limitation
+
+The real QA result correctly identified the current rendered CrunchPop preview’s weak contact shadow. Regeneration remains creator-triggered and is not an autonomous repair loop.
+
+## 2026-08-12 — Frontend Reconstruction
+
+### Status
+
+🟢 **Completed**
+
+### Summary
+
+Reconstructed the Adless frontend as a polished, responsive video platform while preserving the existing backend contracts and creator AI pipeline. The viewer experience now uses a fixed YouTube-style header, collapsible desktop navigation, mobile bottom navigation, category filters, borderless video cards, a dominant watch player, and an Up Next rail. AI controls were removed from viewer pages and consolidated in Creator Studio.
+
+Creator Studio now has a separate application shell with Dashboard, Content, Upload, Analytics, AI Placements, and video-detail routes. The video detail page presents the existing Gemini analysis → ClickHouse campaign selection → placement preview → Gemini visual QA → separate creator approval flow as a clear five-stage workflow. Existing upload, thumbnail extraction, playback, private GCS preview, and API service functions were preserved.
+
+### Routes Added or Rebuilt
+
+- `/`
+- `/watch/{video_id}`
+- `/studio`
+- `/studio/content`
+- `/studio/upload`
+- `/studio/analytics`
+- `/studio/placements`
+- `/studio/videos/{video_id}`
+
+### Verification
+
+- Frontend production build: **passed** (9 routes, lint and TypeScript checks included).
+- Backend regression suite: **33 passed**.
+- Browser verification: homepage catalog, local video playback, Up Next rail, all Studio routes, cached Gemini analysis, and responsive 390px layouts passed.
+- Mobile horizontal overflow: none observed.
+- Browser console errors: none observed. The initial Next.js LCP thumbnail warning was addressed with priority loading for the first card.
+- Real campaign selection was initiated through the existing UI, but the external ClickHouse MCP request remained pending during this verification window; no result was fabricated and the UI retained an honest loading state.
+- `PROJECT_BLUEPRINT.md`: unchanged.
+
+### Files
+
+Created navigation shells, Studio workflow components, recommended-video/player components, and Studio Content, Analytics, and Placements routes. Rebuilt the existing homepage, watch page, Studio dashboard, upload page, Studio video detail page, shared theme, video cards/grid/thumbnails, categories, and frontend types.
+
+### Next Step
+
+Creator review of the completed frontend and a follow-up live MCP workflow check when the remote service responds normally.
+
 ## 2026-08-12 — Placement QA Agent
 
 ### Status

@@ -6,5 +6,10 @@ export const CATEGORIES: NavCategory[] = [
   "Gaming",
   "Entertainment",
   "AI & Future",
+  "Design",
   "Lifestyle",
+  "Film",
+  "Travel",
+  "Music",
+  "Recently Uploaded",
 ];

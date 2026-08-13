@@ -9,6 +9,7 @@ interface VideoThumbnailProps {
   alt: string;
   fallbackSvg?: string;
   className?: string;
+  priority?: boolean;
 }
 
 export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
@@ -17,6 +18,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   alt,
   fallbackSvg = "/assets/thumb-ai-placement.svg",
   className = "object-cover",
+  priority = false,
 }) => {
   const [currentSrc, setCurrentSrc] = useState<string>(
     thumbnailUrl || fallbackSvg
@@ -93,6 +95,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
       className={className}
       onError={handleImageError}
       unoptimized
+      priority={priority}
     />
   );
 };

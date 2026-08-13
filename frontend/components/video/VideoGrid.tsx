@@ -7,9 +7,10 @@ import { VideoOff } from "lucide-react";
 
 interface VideoGridProps {
   videos: Video[];
+  title?: string;
 }
 
-export const VideoGrid: React.FC<VideoGridProps> = ({ videos }) => {
+export const VideoGrid: React.FC<VideoGridProps> = ({ videos, title }) => {
   if (videos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -25,10 +26,12 @@ export const VideoGrid: React.FC<VideoGridProps> = ({ videos }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-      {videos.map((video) => (
-        <VideoCard key={video.id} video={video} />
+    <section className="mb-10">
+      {title && <h2 className="font-display mb-4 text-lg font-semibold">{title}</h2>}
+    <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      {videos.map((video, index) => (
+        <VideoCard key={video.id} video={video} priority={index < 4} />
       ))}
-    </div>
+    </div></section>
   );
 };

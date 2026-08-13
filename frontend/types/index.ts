@@ -132,4 +132,4 @@ export interface Video {
   storagePath?: string | null;
 }
 
-export type NavCategory = "All" | "Technology" | "Gaming" | "Entertainment" | "AI & Future" | "Lifestyle";
+export type NavCategory = "All" | "Technology" | "Gaming" | "Entertainment" | "AI & Future" | "Lifestyle" | "Design" | "Film" | "Travel" | "Music" | "Recently Uploaded";

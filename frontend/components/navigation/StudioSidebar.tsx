@@ -1,0 +1,6 @@
+"use client";
+import Link from "next/link";
+import {usePathname} from "next/navigation";
+import {Clapperboard,LayoutDashboard,Settings,Sparkles,Upload} from "lucide-react";
+const items=[{label:"Dashboard",href:"/studio",icon:LayoutDashboard},{label:"Content",href:"/studio/content",icon:Clapperboard},{label:"AI Placements",href:"/studio/placements",icon:Sparkles},{label:"Upload",href:"/studio/upload",icon:Upload},{label:"Settings",href:"/studio",icon:Settings}];
+export function StudioSidebar({open}:{open:boolean}){const pathname=usePathname();return <aside className={`fixed bottom-0 left-0 top-14 z-40 overflow-y-auto border-r border-border bg-background py-4 transition-transform lg:block lg:w-60 ${open?"translate-x-0 w-60":"-translate-x-full lg:translate-x-0"}`}><nav className="space-y-1 px-3">{items.map(item=>{const active=pathname===item.href||(item.href!=="/studio"&&pathname.startsWith(item.href));return <Link key={item.label} href={item.href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${active?"bg-elevated font-semibold text-white":"text-muted-foreground hover:bg-elevated hover:text-white"}`}><item.icon className={`h-[18px] w-[18px] ${active?"text-adless-cyan":""}`}/>{item.label}</Link>})}</nav></aside>}

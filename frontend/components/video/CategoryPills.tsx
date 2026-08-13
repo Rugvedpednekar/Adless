@@ -14,17 +14,17 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({
   onSelectCategory,
 }) => {
   return (
-    <div className="flex items-center gap-2.5 overflow-x-auto pb-2 pt-1 scrollbar-none">
+    <div className="flex items-center gap-3 overflow-x-auto py-3 scrollbar-none">
       {CATEGORIES.map((category) => {
         const isSelected = selectedCategory === category;
         return (
           <button
             key={category}
             onClick={() => onSelectCategory(category)}
-            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               isSelected
-                ? "bg-gradient-to-r from-adless-cyan to-blue-600 text-slate-950 shadow-glow-cyan font-bold"
-                : "bg-surface border border-surface-border text-slate-300 hover:text-white hover:bg-surface-hover hover:border-slate-600"
+                ? "bg-[#f1f1f1] text-[#0f0f0f]"
+                : "bg-[#272727] text-[#f1f1f1] hover:bg-[#3f3f3f]"
             }`}
           >
             {category}
