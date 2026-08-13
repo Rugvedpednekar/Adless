@@ -69,6 +69,32 @@ export interface PlacementPreview {
   geometry: PlacementGeometry;
 }
 
+export interface PlacementQAChecks {
+  surfaceAlignment: boolean;
+  realisticScale: boolean;
+  realisticPosition: boolean;
+  plausiblePerspective: boolean;
+  believableContactShadow: boolean;
+  floatingProduct: boolean;
+  faceObstruction: boolean;
+  subtitleObstruction: boolean;
+  importantObjectObstruction: boolean;
+  mugIntersection: boolean;
+  productVisibility: boolean;
+  excessiveProminence: boolean;
+  contextuallyAppropriate: boolean;
+  safeContext: boolean;
+}
+
+export interface PlacementQAResult {
+  approved: boolean;
+  qualityScore: number;
+  checks: PlacementQAChecks;
+  issues: string[];
+  reason: string;
+  representativeFrameTime: number;
+}
+
 export interface AIAnalysisState {
   status: "not_analyzed" | "analyzing" | "completed" | "failed" | "ready";
   sceneType?: string | null;

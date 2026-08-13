@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, BarChart3, BrainCircuit, Check, Clock3, Film, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 
-import { analyzeVideoWithGemini, createPlacementPreview, getVideo, selectBestCampaign } from "@/services/video-service";
-import { PlacementPreview, SelectedCampaign, Video, VideoAnalysis } from "@/types";
+import { analyzeVideoWithGemini, createPlacementPreview, getVideo, runPlacementQA, selectBestCampaign } from "@/services/video-service";
+import { PlacementPreview, PlacementQAResult, SelectedCampaign, Video, VideoAnalysis } from "@/types";
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -31,6 +31,9 @@ export default function StudioVideoDetailPage() {
   const [previewLoading, setPreviewLoading] = useState<number | null>(null);
   const [previewErrors, setPreviewErrors] = useState<Record<number, string>>({});
   const [decisions, setDecisions] = useState<Record<number, "approved" | "rejected">>({});
+  const [qaResults, setQaResults] = useState<Record<number, PlacementQAResult>>({});
+  const [qaLoading, setQaLoading] = useState<number | null>(null);
+  const [qaErrors, setQaErrors] = useState<Record<number, string>>({});
 
   useEffect(() => {
     getVideo(videoId).then(setVideo).catch(() => setError("Unable to load this video."));
@@ -68,10 +71,24 @@ export default function StudioVideoDetailPage() {
     try {
       const preview = await createPlacementPreview(videoId, placementIndex, force);
       setPreviews((current) => ({ ...current, [placementIndex]: preview }));
+      if (force) setQaResults((current) => { const next = { ...current }; delete next[placementIndex]; return next; });
     } catch (requestError) {
       setPreviewErrors((current) => ({ ...current, [placementIndex]: requestError instanceof Error ? requestError.message : "Preview rendering failed." }));
     } finally {
       setPreviewLoading(null);
+    }
+  }
+
+  async function runQualityCheck(placementIndex: number) {
+    setQaLoading(placementIndex);
+    setQaErrors((current) => ({ ...current, [placementIndex]: "" }));
+    try {
+      const result = await runPlacementQA(videoId, placementIndex);
+      setQaResults((current) => ({ ...current, [placementIndex]: result }));
+    } catch (requestError) {
+      setQaErrors((current) => ({ ...current, [placementIndex]: requestError instanceof Error ? requestError.message : "AI quality check failed." }));
+    } finally {
+      setQaLoading(null);
     }
   }
 
@@ -144,6 +161,7 @@ export default function StudioVideoDetailPage() {
                             const placementIndex = analysis.scenes.slice(0, sceneIndex).reduce((count, priorScene) => count + priorScene.placementOpportunities.length, 0) + index;
                             const selected = campaigns[placementIndex];
                             const preview = previews[placementIndex];
+                            const qa = qaResults[placementIndex];
                             return <>
                           <div className="flex items-center justify-between gap-3"><p className="font-bold capitalize">{displayLabel(opportunity.surface)}</p><span className="text-sm font-bold text-adless-cyan">{Math.round(opportunity.confidence * 100)}%</span></div>
                           <div className="mt-3 flex flex-wrap gap-2">{opportunity.recommendedCategories.map((category) => <span key={category} className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs capitalize">{displayLabel(category)}</span>)}</div>
@@ -161,7 +179,28 @@ export default function StudioVideoDetailPage() {
                               <div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="mb-2 text-[10px] font-bold tracking-widest text-slate-500">BEFORE</p><video controls preload="metadata" src={video.videoSrc} className="aspect-video w-full rounded-lg bg-black" /></div><div><p className="mb-2 text-[10px] font-bold tracking-widest text-adless-cyan">AFTER</p><video key={preview.previewUrl} controls preload="metadata" src={preview.previewUrl} className="aspect-video w-full rounded-lg bg-black" /></div></div>
                               <div className="mt-4 grid grid-cols-3 gap-2 text-xs"><div><span className="text-slate-500">Surface</span><p className="font-bold capitalize">{displayLabel(preview.surface)}</p></div><div><span className="text-slate-500">Visible</span><p className="font-bold">{formatTime(preview.startTime)}–{formatTime(preview.endTime)}</p></div><div><span className="text-slate-500">ClickHouse score</span><p className="font-bold">{preview.performanceScore}</p></div></div>
                               <p className="mt-3 text-xs leading-relaxed text-slate-400">{preview.geometry.reason}</p>
-                              <div className="mt-4 flex flex-wrap gap-2"><button onClick={() => setDecisions((current) => ({ ...current, [placementIndex]: "approved" }))} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950"><Check className="h-3.5 w-3.5" />Approve Placement</button><button onClick={() => renderPreview(placementIndex, true)} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border px-3 py-2 text-xs font-bold"><RefreshCw className="h-3.5 w-3.5" />Regenerate</button><button onClick={() => setDecisions((current) => ({ ...current, [placementIndex]: "rejected" }))} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300"><X className="h-3.5 w-3.5" />Reject</button></div>
+                              <div className="mt-5 border-t border-slate-800 pt-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-widest text-adless-purple">Adless AI Quality Check</p><p className="mt-1 text-xs text-slate-500">Gemini visually inspects a real frame from the rendered preview.</p></div><button onClick={() => runQualityCheck(placementIndex)} disabled={qaLoading === placementIndex} className="inline-flex items-center gap-2 rounded-lg border border-adless-purple/50 bg-adless-purple/10 px-3 py-2 text-xs font-bold text-purple-200 disabled:opacity-60">{qaLoading === placementIndex && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{qa ? "Run Again" : "Run AI Quality Check"}</button></div>
+                                {qaLoading === placementIndex && <p className="mt-3 text-xs text-slate-400">Gemini is inspecting the rendered placement frame...</p>}
+                                {qaErrors[placementIndex] && <p className="mt-3 text-xs text-rose-300">{qaErrors[placementIndex]}</p>}
+                                {qa && <div className={`mt-4 rounded-xl border p-4 ${qa.approved ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+                                  <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">AI Quality Check</p><h5 className={`mt-1 text-lg font-extrabold ${qa.approved ? "text-emerald-300" : "text-amber-300"}`}>{qa.approved ? "Approved" : "Needs Adjustment"}</h5></div><div className="text-right"><p className="text-xs text-slate-500">Quality</p><p className="text-xl font-extrabold">{Math.round(qa.qualityScore * 100)}%</p></div></div>
+                                  <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+                                    {[
+                                      ["Surface alignment", qa.checks.surfaceAlignment], ["Realistic scale", qa.checks.realisticScale],
+                                      ["Realistic position", qa.checks.realisticPosition], ["Plausible perspective", qa.checks.plausiblePerspective],
+                                      ["Believable contact shadow", qa.checks.believableContactShadow], ["Product visibility", qa.checks.productVisibility],
+                                      ["No face obstruction", !qa.checks.faceObstruction], ["No subtitle obstruction", !qa.checks.subtitleObstruction],
+                                      ["No object obstruction", !qa.checks.importantObjectObstruction], ["No mug intersection", !qa.checks.mugIntersection],
+                                      ["Not floating", !qa.checks.floatingProduct], ["Not excessively prominent", !qa.checks.excessiveProminence],
+                                      ["Context appropriate", qa.checks.contextuallyAppropriate], ["Safe context", qa.checks.safeContext],
+                                    ].map(([label, passed]) => <div key={String(label)} className="flex items-center gap-2"><span className={passed ? "text-emerald-400" : "text-rose-400"}>{passed ? "✓" : "✕"}</span><span className="text-slate-300">{label}</span></div>)}
+                                  </div>
+                                  {qa.issues.length > 0 && <div className="mt-4 rounded-lg bg-amber-500/10 p-3"><p className="text-xs font-bold text-amber-300">Detected issues</p><ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-amber-100">{qa.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}
+                                  <p className="mt-4 text-sm leading-relaxed text-slate-300">{qa.reason}</p><p className="mt-2 text-[10px] text-slate-500">Representative frame: {formatTime(qa.representativeFrameTime)}</p>
+                                </div>}
+                              </div>
+                              <div className="mt-5 border-t border-slate-800 pt-4"><p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Creator Approval · Separate from AI review</p><div className="flex flex-wrap gap-2"><button onClick={() => setDecisions((current) => ({ ...current, [placementIndex]: "approved" }))} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950"><Check className="h-3.5 w-3.5" />Approve Placement</button><button onClick={() => renderPreview(placementIndex, true)} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border px-3 py-2 text-xs font-bold"><RefreshCw className="h-3.5 w-3.5" />Regenerate Placement</button><button onClick={() => setDecisions((current) => ({ ...current, [placementIndex]: "rejected" }))} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300"><X className="h-3.5 w-3.5" />Reject</button></div></div>
                               {decisions[placementIndex] && <p className={`mt-3 text-xs font-bold ${decisions[placementIndex] === "approved" ? "text-emerald-300" : "text-rose-300"}`}>Placement {decisions[placementIndex]} for this review session.</p>}
                             </div>}
                           </div>

@@ -1,4 +1,4 @@
-import { NavCategory, PlacementPreview, SelectedCampaign, Video, VideoAnalysis } from "@/types";
+import { NavCategory, PlacementPreview, PlacementQAResult, SelectedCampaign, Video, VideoAnalysis } from "@/types";
 
 interface ApiCreator {
   id: string;
@@ -299,5 +299,70 @@ export async function createPlacementPreview(
     previewAvailable: result.preview_available,
     previewUrl: `${apiUrl}${result.preview_url}`,
     geometry: result.geometry,
+  };
+}
+
+interface ApiPlacementQAResult {
+  approved: boolean;
+  quality_score: number;
+  checks: {
+    surface_alignment: boolean;
+    realistic_scale: boolean;
+    realistic_position: boolean;
+    plausible_perspective: boolean;
+    believable_contact_shadow: boolean;
+    floating_product: boolean;
+    face_obstruction: boolean;
+    subtitle_obstruction: boolean;
+    important_object_obstruction: boolean;
+    mug_intersection: boolean;
+    product_visibility: boolean;
+    excessive_prominence: boolean;
+    contextually_appropriate: boolean;
+    safe_context: boolean;
+  };
+  issues: string[];
+  reason: string;
+  representative_frame_time: number;
+}
+
+export async function runPlacementQA(
+  videoId: string,
+  placementIndex: number
+): Promise<PlacementQAResult> {
+  const response = await fetch(
+    `${apiUrl}/api/videos/${encodeURIComponent(videoId)}/placements/${placementIndex}/qa`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    let message = `AI quality check failed with status ${response.status}`;
+    try {
+      message = (await response.json()).detail || message;
+    } catch {}
+    throw new Error(message);
+  }
+  const result = (await response.json()) as ApiPlacementQAResult;
+  return {
+    approved: result.approved,
+    qualityScore: result.quality_score,
+    checks: {
+      surfaceAlignment: result.checks.surface_alignment,
+      realisticScale: result.checks.realistic_scale,
+      realisticPosition: result.checks.realistic_position,
+      plausiblePerspective: result.checks.plausible_perspective,
+      believableContactShadow: result.checks.believable_contact_shadow,
+      floatingProduct: result.checks.floating_product,
+      faceObstruction: result.checks.face_obstruction,
+      subtitleObstruction: result.checks.subtitle_obstruction,
+      importantObjectObstruction: result.checks.important_object_obstruction,
+      mugIntersection: result.checks.mug_intersection,
+      productVisibility: result.checks.product_visibility,
+      excessiveProminence: result.checks.excessive_prominence,
+      contextuallyAppropriate: result.checks.contextually_appropriate,
+      safeContext: result.checks.safe_context,
+    },
+    issues: result.issues,
+    reason: result.reason,
+    representativeFrameTime: result.representative_frame_time,
   };
 }

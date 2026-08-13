@@ -18,6 +18,12 @@ from app.schemas.video import Video
 from app.schemas.video_analysis import VideoAnalysis
 from app.schemas.campaign_selection import CampaignSelectionRequest, SelectedCampaign
 from app.schemas.placement_preview import ProductPlacementPreview
+from app.schemas.placement_qa import PlacementQAResult
+from app.agents.placement_qa_agent import (
+    PlacementQAAgent,
+    PlacementQAError,
+    PlacementQAValidationError,
+)
 from app.agents.campaign_selector import (
     CampaignSelectionError,
     CampaignSelectionValidationError,
@@ -96,6 +102,12 @@ def get_product_placement_service(
     localizer: Annotated[PlacementLocalizationService, Depends(get_placement_localizer)],
 ) -> ProductPlacementService:
     return ProductPlacementService(storage=storage, localizer=localizer)
+
+
+def get_placement_qa_agent(
+    storage: Annotated[GCSStorageService, Depends(get_storage_service)],
+) -> PlacementQAAgent:
+    return PlacementQAAgent(storage=storage)
 
 
 @router.get("", response_model=list[Video])
@@ -405,6 +417,52 @@ async def stream_placement_preview(
         media_type=media.content_type,
         headers=headers,
     )
+
+
+@router.post(
+    "/{video_id}/placements/{placement_index}/qa",
+    response_model=PlacementQAResult,
+)
+async def run_placement_qa(
+    video_id: str,
+    placement_index: int,
+    qa_agent: Annotated[PlacementQAAgent, Depends(get_placement_qa_agent)],
+    analyzer: Annotated[GeminiVideoAnalyzer, Depends(get_gemini_analyzer)],
+) -> PlacementQAResult:
+    video = get_video(video_id)
+    if video is None:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if not video.storage_path:
+        raise HTTPException(status_code=409, detail="Video has no Gemini analysis")
+    analysis = analyzer.get_cached_analysis(video_id=video_id, gcs_uri=video.storage_path)
+    if analysis is None:
+        raise HTTPException(status_code=409, detail="Gemini analysis has not been completed")
+    placements = [
+        (scene, opportunity)
+        for scene in analysis.scenes
+        for opportunity in scene.placement_opportunities
+    ]
+    if placement_index < 0 or placement_index >= len(placements):
+        raise HTTPException(status_code=404, detail="Placement opportunity not found")
+    preview = get_cached_preview(video_id, placement_index)
+    if preview is None:
+        raise HTTPException(status_code=409, detail="Render a placement preview before running QA")
+    campaign = get_selected_campaign(video_id, placement_index)
+    if campaign is None:
+        raise HTTPException(status_code=409, detail="Selected campaign metadata is unavailable")
+    scene, opportunity = placements[placement_index]
+    try:
+        return await asyncio.to_thread(
+            qa_agent.review,
+            preview=preview,
+            campaign=campaign,
+            environment=scene.environment,
+            recommended_categories=opportunity.recommended_categories,
+        )
+    except PlacementQAValidationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except PlacementQAError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/{video_id}", response_model=Video)

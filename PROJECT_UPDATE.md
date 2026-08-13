@@ -19,9 +19,114 @@ This document is the running development record for **Adless**. It tracks what h
 - **Partner:** ClickHouse
 - **Primary AI:** Gemini
 - **Google Cloud project:** `adless-ai-2026`
-- **Current phase:** Product Placement Preview (Gemini localization + FFmpeg + private GCS verified)
+- **Current phase:** Placement QA Agent (real rendered-frame Gemini review verified)
 
 ## Updates
+
+## 2026-08-12 — Placement QA Agent
+
+### Status
+
+🟢 **Completed**
+
+### Phase
+
+Private rendered preview → representative frame → Gemini Vision QA → validated quality result → separate Creator Approval
+
+### Summary
+
+Implemented the first Adless Placement QA Agent without changing the existing scene analysis, ClickHouse MCP campaign selection, placement localization, rendering, private GCS, or Before/After workflow. The agent downloads the actual rendered preview, extracts a representative JPEG from the midpoint of the placement interval with FFmpeg, sends that real frame plus placement/campaign context to Vertex Gemini, and validates the structured response with Pydantic. Gemini approval never publishes or performs creator approval.
+
+### API Added
+
+```text
+POST /api/videos/{video_id}/placements/{placement_index}/qa
+```
+
+The endpoint requires an existing video analysis, valid placement, rendered preview, and selected campaign. Missing prerequisites return safe 404/409 responses; Gemini, extraction, storage, and malformed-response failures return HTTP 502 without fabricated QA.
+
+### Real Gemini Visual QA
+
+```text
+video: original-living-room-ai-demo-dbfa4523
+campaign: camp_001 / CrunchPop Classic Chips
+preview: gs://adless-media-2026/previews/original-living-room-ai-demo-dbfa4523/0/preview.mp4
+representative frame: 2.5 seconds
+approved: true
+quality score: 0.90
+```
+
+Validated checks:
+
+- Surface alignment, scale, position, perspective, visibility, category fit, and scene safety: pass.
+- Face, subtitle, important-object, and mug obstruction/intersection: none.
+- Product floating or excessive prominence: none.
+- Contact shadow: needs improvement.
+
+Actual issue:
+
+```text
+Contact shadow is weak, making the product appear slightly less grounded.
+```
+
+Actual Gemini explanation:
+
+```text
+The product is well-integrated into the scene with appropriate scale, position, and perspective. The context is suitable, and there are no obstructions or safety concerns. The contact shadow could be more pronounced for enhanced realism.
+```
+
+### Creator Studio
+
+- Added explicit `Run AI Quality Check` / `Run Again` control after preview creation.
+- Displays overall Approved or Needs Adjustment state and quality percentage.
+- Displays concise status indicators for alignment, scale, position, perspective, contact shadow, visibility, face/subtitle/object/mug obstruction, floating, prominence, context, and safety.
+- Displays issues, Gemini reasoning, and representative frame timestamp.
+- Labels `Creator Approval · Separate from AI review` above Approve, Regenerate Placement, and Reject.
+- AI approval does not trigger creator approval or publishing.
+- Both Before/After videos remained at browser ready state 4 with no media error.
+
+### Files Created
+
+```text
+backend/app/agents/placement_qa_agent.py
+backend/app/schemas/placement_qa.py
+backend/tests/test_placement_qa.py
+```
+
+### Files Modified
+
+```text
+backend/app/api/videos.py
+frontend/app/studio/videos/[videoId]/page.tsx
+frontend/services/video-service.ts
+frontend/types/index.ts
+PROJECT_UPDATE.md
+```
+
+### Verification
+
+```text
+backend: 33 passed
+frontend: production build passed (compile, lint, type checks, 6 routes)
+real rendered preview frame sent to Vertex Gemini: passed
+Pydantic QA validation: passed
+malformed Gemini response rejection: covered
+real mug-intersection assessment: false
+ClickHouse MCP retry and CrunchPop selection: passed, score 8.8
+Before/After playback regression: passed
+Creator Studio QA rendering: passed
+```
+
+### Known Limitations
+
+- QA inspects one representative frame for this static-camera MVP, not every frame in the interval.
+- The contact shadow remains visually subtle and was correctly flagged by Gemini.
+- QA results are not persisted and do not initiate automatic regeneration.
+- Creator decisions remain session-only; no PostgreSQL, publishing, job queue, or tracking was added.
+
+### Next Step
+
+Stop after this verified QA milestone. Do not begin autonomous regeneration, publishing, analytics events, PostgreSQL, or advertiser workflows automatically.
 
 ## 2026-08-12 — First Product Placement Preview
 
