@@ -1,4 +1,4 @@
-import { NavCategory, SelectedCampaign, Video, VideoAnalysis } from "@/types";
+import { NavCategory, PlacementPreview, SelectedCampaign, Video, VideoAnalysis } from "@/types";
 
 interface ApiCreator {
   id: string;
@@ -240,5 +240,64 @@ export async function selectBestCampaign(
     avgExposureSeconds: result.avg_exposure_seconds,
     selectionConfidence: result.selection_confidence,
     reason: result.reason,
+  };
+}
+
+interface ApiPlacementPreview {
+  video_id: string;
+  placement_index: number;
+  campaign_id: string;
+  brand: string;
+  product_name: string;
+  surface: string;
+  start_time: number;
+  end_time: number;
+  placement_confidence: number;
+  performance_score: number;
+  preview_available: boolean;
+  preview_url: string;
+  geometry: {
+    surface: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+    confidence: number;
+    reason: string;
+  };
+}
+
+export async function createPlacementPreview(
+  videoId: string,
+  placementIndex: number,
+  force = false
+): Promise<PlacementPreview> {
+  const response = await fetch(
+    `${apiUrl}/api/videos/${encodeURIComponent(videoId)}/placements/${placementIndex}/preview${force ? "?force=true" : ""}`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    let message = `Preview rendering failed with status ${response.status}`;
+    try {
+      message = (await response.json()).detail || message;
+    } catch {}
+    throw new Error(message);
+  }
+  const result = (await response.json()) as ApiPlacementPreview;
+  return {
+    videoId: result.video_id,
+    placementIndex: result.placement_index,
+    campaignId: result.campaign_id,
+    brand: result.brand,
+    productName: result.product_name,
+    surface: result.surface,
+    startTime: result.start_time,
+    endTime: result.end_time,
+    placementConfidence: result.placement_confidence,
+    performanceScore: result.performance_score,
+    previewAvailable: result.preview_available,
+    previewUrl: `${apiUrl}${result.preview_url}`,
+    geometry: result.geometry,
   };
 }

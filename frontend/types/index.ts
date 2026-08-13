@@ -42,6 +42,33 @@ export interface SelectedCampaign {
   reason: string;
 }
 
+export interface PlacementGeometry {
+  surface: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  confidence: number;
+  reason: string;
+}
+
+export interface PlacementPreview {
+  videoId: string;
+  placementIndex: number;
+  campaignId: string;
+  brand: string;
+  productName: string;
+  surface: string;
+  startTime: number;
+  endTime: number;
+  placementConfidence: number;
+  performanceScore: number;
+  previewAvailable: boolean;
+  previewUrl: string;
+  geometry: PlacementGeometry;
+}
+
 export interface AIAnalysisState {
   status: "not_analyzed" | "analyzing" | "completed" | "failed" | "ready";
   sceneType?: string | null;

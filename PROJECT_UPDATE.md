@@ -19,9 +19,147 @@ This document is the running development record for **Adless**. It tracks what h
 - **Partner:** ClickHouse
 - **Primary AI:** Gemini
 - **Google Cloud project:** `adless-ai-2026`
-- **Current phase:** Campaign Selection Agent (Gemini + ClickHouse MCP implemented and verified)
+- **Current phase:** Product Placement Preview (Gemini localization + FFmpeg + private GCS verified)
 
 ## Updates
+
+## 2026-08-12 — First Product Placement Preview
+
+### Status
+
+🟢 **Completed**
+
+### Phase
+
+Selected campaign → Gemini frame localization → FFmpeg compositing → private GCS preview → Creator review
+
+### Summary
+
+Implemented the first real Adless product-placement preview for the original six-second static-camera living-room demo and fictional CrunchPop campaign. The existing Gemini scene-analysis and ClickHouse MCP campaign-selection workflow remains unchanged. A successful campaign selection is cached locally, the preview endpoint extracts a representative frame, Gemini Vision returns validated normalized geometry, OpenCV builds a transparent product overlay with a subtle contact shadow, FFmpeg renders it only during the detected interval while preserving source audio when present, and the final MP4 is uploaded to the private Adless GCS bucket.
+
+### Product Asset
+
+```text
+backend/product-assets/crunchpop.png
+campaign_id: camp_001
+brand: CrunchPop
+product: CrunchPop Classic Chips
+category: snack
+```
+
+The wholly fictional asset was generated as a product mockup on chroma green, converted locally to RGBA, and validated with transparent corners. No real brand or commercial logo is used.
+
+### API Added
+
+```text
+POST /api/videos/{video_id}/placements/{placement_index}/preview
+POST /api/videos/{video_id}/placements/{placement_index}/preview?force=true
+GET  /api/videos/{video_id}/placements/{placement_index}/preview/stream
+```
+
+Preview creation requires a previously selected campaign and handles missing videos, analysis, placement, selected campaign, product assets, malformed Gemini geometry, FFmpeg failures, and GCS failures without fabricating output.
+
+### Real Localization Result
+
+```json
+{
+  "surface": "coffee_table",
+  "x": 0.38,
+  "y": 0.45,
+  "width": 0.18,
+  "height": 0.22,
+  "rotation": 0.0,
+  "confidence": 0.90,
+  "reason": "Placed a CrunchPop Classic Chips snack bag on the unoccupied left-center portion of the coffee table, away from the existing mug and table edges, at a realistic scale and orientation."
+}
+```
+
+Coordinates came from real Gemini analysis of the extracted midpoint frame and are not hard-coded. Visual inspection confirmed that CrunchPop is grounded on the open center-left table surface without overlapping the mug.
+
+### Rendering Operations
+
+- Downloaded the private original MP4 to a temporary processing directory.
+- Extracted the representative frame at `2.5s` using bundled FFmpeg 7.1.
+- Converted normalized geometry to `1280×720` frame pixels.
+- Used OpenCV to resize the RGBA asset and construct a soft alpha contact shadow.
+- Alpha-composited a full-frame transparent overlay.
+- Used FFmpeg's timed `overlay` filter for `00:00–00:05`.
+- Encoded H.264 High Profile, `yuv420p`, 1280×720, preserving source audio with `-map 0:a? -c:a copy` when present.
+- Cleaned the temporary source, frame, overlay, and rendered file automatically.
+
+The original verification demo has no audio stream; both source and preview are exactly six seconds. The renderer's optional audio mapping and stream copy preserve audio for sources that contain it.
+
+### GCS and Playback Verification
+
+```text
+gs://adless-media-2026/previews/original-living-room-ai-demo-dbfa4523/0/preview.mp4
+```
+
+- Bucket remains private.
+- Protected FastAPI preview stream returned HTTP 206 with `Content-Range: bytes 0-1023/1115811`.
+- Browser loaded both original and preview to `readyState 4` with no media error.
+- No Google credentials are exposed to frontend code.
+
+### Creator Studio
+
+- Added `Preview Placement` after campaign selection.
+- Added honest processing stages without a fake percentage.
+- Added Before/After video players.
+- Displays product, surface, timestamps, localization confidence, ClickHouse score, and Gemini reasoning.
+- Added session-only Approve, Regenerate, and Reject actions.
+- Approval interaction verified.
+- Browser console errors: none.
+
+### Files Created
+
+```text
+backend/product-assets/crunchpop.png
+backend/app/schemas/placement_preview.py
+backend/app/services/campaign_selection_cache.py
+backend/app/services/placement_localization_service.py
+backend/app/services/product_catalog.py
+backend/app/services/product_placement_service.py
+backend/tests/test_product_placement.py
+```
+
+### Files Modified
+
+```text
+.gitignore
+backend/app/api/videos.py
+backend/app/services/storage_service.py
+backend/requirements.txt
+frontend/app/studio/videos/[videoId]/page.tsx
+frontend/services/video-service.ts
+frontend/types/index.ts
+PROJECT_UPDATE.md
+```
+
+### Verification
+
+```text
+backend: 27 passed
+frontend: production build passed (compile, lint, type checks, 6 routes)
+real Gemini localization: passed
+real ClickHouse MCP + Gemini campaign reselection: CrunchPop, score 8.8
+real FFmpeg render: passed
+private GCS upload: passed
+protected range playback: passed
+Before/After Studio UI: passed
+browser console errors: none
+```
+
+### Known Limitations
+
+- Static positioning is intentionally limited to the verified static-camera demo; no tracking is implemented.
+- Perspective matching is limited to scale, rotation, alpha blending, and contact shadow.
+- Campaign selections, previews, and review decisions use local development caches/session state rather than PostgreSQL.
+- Rendering runs synchronously in the request and is not production-scale job processing.
+- The original verification source contains no audio track, so audio preservation was validated structurally rather than with audible content.
+
+### Next Step
+
+Stop after this verified preview milestone. Do not begin QA agents, publishing, advertiser features, PostgreSQL, or production video processing automatically.
 
 ## 2026-08-12 — Campaign Selection Agent with ClickHouse MCP
 

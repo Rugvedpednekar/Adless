@@ -17,6 +17,7 @@ from fastapi.responses import Response
 from app.schemas.video import Video
 from app.schemas.video_analysis import VideoAnalysis
 from app.schemas.campaign_selection import CampaignSelectionRequest, SelectedCampaign
+from app.schemas.placement_preview import ProductPlacementPreview
 from app.agents.campaign_selector import (
     CampaignSelectionError,
     CampaignSelectionValidationError,
@@ -32,6 +33,20 @@ from app.services.gemini_video_analyzer import (
     GeminiConfigurationError,
     GeminiResponseValidationError,
     GeminiVideoAnalyzer,
+)
+from app.services.campaign_selection_cache import (
+    get_selected_campaign,
+    save_selected_campaign,
+)
+from app.services.placement_localization_service import (
+    PlacementLocalizationError,
+    PlacementLocalizationService,
+)
+from app.services.product_catalog import get_product_asset
+from app.services.product_placement_service import (
+    ProductPlacementError,
+    ProductPlacementService,
+    get_cached_preview,
 )
 from app.services.video_catalog import (
     generate_video_id,
@@ -70,6 +85,17 @@ def get_storage_service() -> GCSStorageService:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+
+
+def get_placement_localizer() -> PlacementLocalizationService:
+    return PlacementLocalizationService()
+
+
+def get_product_placement_service(
+    storage: Annotated[GCSStorageService, Depends(get_storage_service)],
+    localizer: Annotated[PlacementLocalizationService, Depends(get_placement_localizer)],
+) -> ProductPlacementService:
+    return ProductPlacementService(storage=storage, localizer=localizer)
 
 
 @router.get("", response_model=list[Video])
@@ -274,7 +300,7 @@ async def select_campaign(
             placement_surface=opportunity.surface,
             categories=opportunity.recommended_categories,
         )
-        return await asyncio.to_thread(
+        selected = await asyncio.to_thread(
             selector.select,
             video_id=video_id,
             environment=scene.environment,
@@ -284,6 +310,8 @@ async def select_campaign(
             market=market,
             candidates=candidates,
         )
+        save_selected_campaign(video_id, placement_index, selected)
+        return selected
     except NoCompatibleCampaignsError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ClickHouseMCPError as exc:
@@ -292,6 +320,91 @@ async def select_campaign(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except CampaignSelectionError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{video_id}/placements/{placement_index}/preview",
+    response_model=ProductPlacementPreview,
+)
+async def create_placement_preview(
+    video_id: str,
+    placement_index: int,
+    placement_service: Annotated[ProductPlacementService, Depends(get_product_placement_service)],
+    analyzer: Annotated[GeminiVideoAnalyzer, Depends(get_gemini_analyzer)],
+    force: bool = Query(default=False),
+) -> ProductPlacementPreview:
+    video = get_video(video_id)
+    if video is None:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if not video.storage_path:
+        raise HTTPException(status_code=409, detail="Video is not available in Cloud Storage")
+    analysis = analyzer.get_cached_analysis(video_id=video_id, gcs_uri=video.storage_path)
+    if analysis is None:
+        raise HTTPException(status_code=409, detail="Gemini analysis has not been completed")
+    placements = [
+        (scene, opportunity)
+        for scene in analysis.scenes
+        for opportunity in scene.placement_opportunities
+    ]
+    if placement_index < 0 or placement_index >= len(placements):
+        raise HTTPException(status_code=404, detail="Placement opportunity not found")
+    campaign = get_selected_campaign(video_id, placement_index)
+    if campaign is None:
+        raise HTTPException(status_code=409, detail="Select a campaign before creating a preview")
+    product = get_product_asset(campaign.campaign_id)
+    if product is None:
+        raise HTTPException(status_code=422, detail="Selected campaign has no product asset")
+    scene, opportunity = placements[placement_index]
+    try:
+        return await asyncio.to_thread(
+            placement_service.create_preview,
+            video_id=video_id,
+            placement_index=placement_index,
+            source_uri=video.storage_path,
+            start_time=scene.start_time,
+            end_time=scene.end_time,
+            surface=opportunity.surface,
+            campaign=campaign,
+            product=product,
+            force=force,
+        )
+    except (PlacementLocalizationError, ProductPlacementError, StorageOperationError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/{video_id}/placements/{placement_index}/preview/stream")
+async def stream_placement_preview(
+    video_id: str,
+    placement_index: int,
+    storage_service: Annotated[GCSStorageService, Depends(get_storage_service)],
+    range_header: Annotated[str | None, Header(alias="Range")] = None,
+) -> Response:
+    preview = get_cached_preview(video_id, placement_index)
+    if preview is None:
+        raise HTTPException(status_code=404, detail="Placement preview not found")
+    try:
+        start, end = _parse_range_header(range_header)
+        media = await asyncio.to_thread(
+            storage_service.download_range,
+            storage_path=preview.storage_path,
+            start=start,
+            end=end,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=416, detail=str(exc)) from exc
+    except StorageOperationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    headers = {"Accept-Ranges": "bytes", "Content-Length": str(len(media.data))}
+    response_status = status.HTTP_200_OK
+    if range_header:
+        response_status = status.HTTP_206_PARTIAL_CONTENT
+        headers["Content-Range"] = f"bytes {media.start}-{media.end}/{media.total_size}"
+    return Response(
+        content=media.data,
+        status_code=response_status,
+        media_type=media.content_type,
+        headers=headers,
+    )
 
 
 @router.get("/{video_id}", response_model=Video)

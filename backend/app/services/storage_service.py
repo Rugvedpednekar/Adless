@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pathlib import PurePath
+from pathlib import Path, PurePath
 import re
 from typing import BinaryIO
 
@@ -80,6 +80,30 @@ class GCSStorageService:
             return f"gs://{self.bucket_name}/{object_name}"
         except GoogleAPIError as exc:
             raise StorageOperationError(f"Cloud Storage upload failed: {exc}") from exc
+
+    def upload_file(
+        self, *, source: Path, object_name: str, content_type: str
+    ) -> str:
+        try:
+            blob = self.bucket.blob(object_name)
+            blob.upload_from_filename(
+                str(source), content_type=content_type, checksum="auto"
+            )
+            return f"gs://{self.bucket_name}/{object_name}"
+        except GoogleAPIError as exc:
+            raise StorageOperationError(f"Cloud Storage upload failed: {exc}") from exc
+
+    def download_to_file(self, *, storage_path: str, destination: Path) -> None:
+        object_name = self._object_name(storage_path)
+        try:
+            blob = self.bucket.get_blob(object_name)
+            if blob is None:
+                raise StorageOperationError("Cloud Storage video object was not found")
+            blob.download_to_filename(str(destination), checksum="auto")
+        except StorageOperationError:
+            raise
+        except GoogleAPIError as exc:
+            raise StorageOperationError(f"Cloud Storage download failed: {exc}") from exc
 
     def delete_object(self, storage_path: str) -> None:
         object_name = self._object_name(storage_path)
