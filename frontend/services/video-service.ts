@@ -1,4 +1,4 @@
-import { NavCategory, Video, VideoAnalysis } from "@/types";
+import { NavCategory, SelectedCampaign, Video, VideoAnalysis } from "@/types";
 
 interface ApiCreator {
   id: string;
@@ -190,5 +190,55 @@ export async function analyzeVideoWithGemini(
         reason: item.reason,
       })),
     })),
+  };
+}
+
+interface ApiSelectedCampaign {
+  campaign_id: string;
+  brand: string;
+  product_name: string;
+  category: string;
+  market: string;
+  placement_surface: string;
+  performance_score: number;
+  success_rate: number;
+  avg_exposure_seconds: number;
+  selection_confidence: number;
+  reason: string;
+}
+
+export async function selectBestCampaign(
+  videoId: string,
+  placementIndex: number,
+  market = "US"
+): Promise<SelectedCampaign> {
+  const response = await fetch(
+    `${apiUrl}/api/videos/${encodeURIComponent(videoId)}/placements/${placementIndex}/select-campaign`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ market }),
+    }
+  );
+  if (!response.ok) {
+    let message = `Campaign selection failed with status ${response.status}`;
+    try {
+      message = (await response.json()).detail || message;
+    } catch {}
+    throw new Error(message);
+  }
+  const result = (await response.json()) as ApiSelectedCampaign;
+  return {
+    campaignId: result.campaign_id,
+    brand: result.brand,
+    productName: result.product_name,
+    category: result.category,
+    market: result.market,
+    placementSurface: result.placement_surface,
+    performanceScore: result.performance_score,
+    successRate: result.success_rate,
+    avgExposureSeconds: result.avg_exposure_seconds,
+    selectionConfidence: result.selection_confidence,
+    reason: result.reason,
   };
 }

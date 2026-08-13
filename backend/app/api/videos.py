@@ -16,6 +16,17 @@ from fastapi.responses import Response
 
 from app.schemas.video import Video
 from app.schemas.video_analysis import VideoAnalysis
+from app.schemas.campaign_selection import CampaignSelectionRequest, SelectedCampaign
+from app.agents.campaign_selector import (
+    CampaignSelectionError,
+    CampaignSelectionValidationError,
+    CampaignSelector,
+)
+from app.services.clickhouse_mcp_service import (
+    ClickHouseMCPError,
+    ClickHouseMCPService,
+    NoCompatibleCampaignsError,
+)
 from app.services.gemini_video_analyzer import (
     GeminiAnalysisError,
     GeminiConfigurationError,
@@ -41,6 +52,14 @@ router = APIRouter(prefix="/videos", tags=["Videos"])
 
 def get_gemini_analyzer() -> GeminiVideoAnalyzer:
     return GeminiVideoAnalyzer()
+
+
+def get_clickhouse_mcp_service() -> ClickHouseMCPService:
+    return ClickHouseMCPService()
+
+
+def get_campaign_selector() -> CampaignSelector:
+    return CampaignSelector()
 
 
 def get_storage_service() -> GCSStorageService:
@@ -213,6 +232,66 @@ async def analyze_video(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
+
+
+@router.post(
+    "/{video_id}/placements/{placement_index}/select-campaign",
+    response_model=SelectedCampaign,
+)
+async def select_campaign(
+    video_id: str,
+    placement_index: int,
+    request: CampaignSelectionRequest,
+    analyzer: Annotated[GeminiVideoAnalyzer, Depends(get_gemini_analyzer)],
+    mcp_service: Annotated[ClickHouseMCPService, Depends(get_clickhouse_mcp_service)],
+    selector: Annotated[CampaignSelector, Depends(get_campaign_selector)],
+) -> SelectedCampaign:
+    video = get_video(video_id)
+    if video is None:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if not video.storage_path:
+        raise HTTPException(status_code=409, detail="Video has no Gemini analysis")
+
+    analysis = analyzer.get_cached_analysis(video_id=video_id, gcs_uri=video.storage_path)
+    if analysis is None:
+        raise HTTPException(status_code=409, detail="Gemini analysis has not been completed")
+
+    placements = [
+        (scene, opportunity)
+        for scene in analysis.scenes
+        for opportunity in scene.placement_opportunities
+    ]
+    if placement_index < 0 or placement_index >= len(placements):
+        raise HTTPException(status_code=404, detail="Placement opportunity not found")
+
+    scene, opportunity = placements[placement_index]
+    market = request.market.upper()
+    try:
+        candidates, _query = await asyncio.to_thread(
+            mcp_service.query_campaigns,
+            market=market,
+            environment=scene.environment,
+            placement_surface=opportunity.surface,
+            categories=opportunity.recommended_categories,
+        )
+        return await asyncio.to_thread(
+            selector.select,
+            video_id=video_id,
+            environment=scene.environment,
+            placement_surface=opportunity.surface,
+            recommended_categories=opportunity.recommended_categories,
+            placement_confidence=opportunity.confidence,
+            market=market,
+            candidates=candidates,
+        )
+    except NoCompatibleCampaignsError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ClickHouseMCPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except CampaignSelectionValidationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except CampaignSelectionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/{video_id}", response_model=Video)

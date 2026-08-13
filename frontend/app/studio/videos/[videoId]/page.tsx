@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BrainCircuit, Clock3, Film, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, BarChart3, BrainCircuit, Clock3, Film, Loader2, RefreshCw, Sparkles } from "lucide-react";
 
-import { analyzeVideoWithGemini, getVideo } from "@/services/video-service";
-import { Video, VideoAnalysis } from "@/types";
+import { analyzeVideoWithGemini, getVideo, selectBestCampaign } from "@/services/video-service";
+import { SelectedCampaign, Video, VideoAnalysis } from "@/types";
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -24,6 +24,9 @@ export default function StudioVideoDetailPage() {
   const [analysis, setAnalysis] = useState<VideoAnalysis | null>(null);
   const [status, setStatus] = useState<"ready" | "loading" | "success" | "error">("ready");
   const [error, setError] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<Record<number, SelectedCampaign>>({});
+  const [campaignLoading, setCampaignLoading] = useState<number | null>(null);
+  const [campaignErrors, setCampaignErrors] = useState<Record<number, string>>({});
 
   useEffect(() => {
     getVideo(videoId).then(setVideo).catch(() => setError("Unable to load this video."));
@@ -38,6 +41,19 @@ export default function StudioVideoDetailPage() {
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Analysis failed.");
       setStatus("error");
+    }
+  }
+
+  async function findCampaign(placementIndex: number) {
+    setCampaignLoading(placementIndex);
+    setCampaignErrors((current) => ({ ...current, [placementIndex]: "" }));
+    try {
+      const selected = await selectBestCampaign(videoId, placementIndex);
+      setCampaigns((current) => ({ ...current, [placementIndex]: selected }));
+    } catch (requestError) {
+      setCampaignErrors((current) => ({ ...current, [placementIndex]: requestError instanceof Error ? requestError.message : "Campaign selection failed." }));
+    } finally {
+      setCampaignLoading(null);
     }
   }
 
@@ -106,9 +122,21 @@ export default function StudioVideoDetailPage() {
                     <div className="mt-5 grid gap-4 lg:grid-cols-2">
                       {scene.placementOpportunities.length ? scene.placementOpportunities.map((opportunity, index) => (
                         <div key={`${opportunity.surface}-${index}`} className="rounded-xl border border-adless-purple/30 bg-adless-purple/5 p-4">
+                          {(() => {
+                            const placementIndex = analysis.scenes.slice(0, sceneIndex).reduce((count, priorScene) => count + priorScene.placementOpportunities.length, 0) + index;
+                            const selected = campaigns[placementIndex];
+                            return <>
                           <div className="flex items-center justify-between gap-3"><p className="font-bold capitalize">{displayLabel(opportunity.surface)}</p><span className="text-sm font-bold text-adless-cyan">{Math.round(opportunity.confidence * 100)}%</span></div>
                           <div className="mt-3 flex flex-wrap gap-2">{opportunity.recommendedCategories.map((category) => <span key={category} className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs capitalize">{displayLabel(category)}</span>)}</div>
                           <p className="mt-3 text-sm leading-relaxed text-slate-400">{opportunity.reason}</p>
+                          <div className="mt-4 border-t border-slate-800 pt-4">
+                            <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"><BarChart3 className="h-3.5 w-3.5 text-adless-cyan" /> Campaign intelligence powered by ClickHouse</p>
+                            <button onClick={() => findCampaign(placementIndex)} disabled={campaignLoading === placementIndex} className="inline-flex items-center gap-2 rounded-lg border border-adless-cyan/40 bg-adless-cyan/10 px-3 py-2 text-xs font-bold text-adless-cyan disabled:opacity-60">{campaignLoading === placementIndex && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{selected ? "Find Again" : "Find Best Campaign"}</button>
+                            {campaignErrors[placementIndex] && <p className="mt-3 text-xs text-rose-300">{campaignErrors[placementIndex]}</p>}
+                            {selected && <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Selected campaign</p><h4 className="mt-1 font-bold">{selected.brand} · {selected.productName}</h4><p className="mt-1 text-xs capitalize text-slate-400">{selected.category} · {selected.market}</p></div><span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">{Math.round(selected.selectionConfidence * 100)}% AI confidence</span></div><div className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><span className="text-slate-500">Score</span><p className="font-bold">{selected.performanceScore}</p></div><div><span className="text-slate-500">Success</span><p className="font-bold">{Math.round(selected.successRate * 100)}%</p></div><div><span className="text-slate-500">Exposure</span><p className="font-bold">{selected.avgExposureSeconds.toFixed(1)}s</p></div></div><p className="mt-3 text-sm leading-relaxed text-slate-300">{selected.reason}</p></div>}
+                          </div>
+                          </>;
+                          })()}
                         </div>
                       )) : <p className="text-sm text-slate-500">No safe, natural placement opportunity detected in this scene.</p>}
                     </div>

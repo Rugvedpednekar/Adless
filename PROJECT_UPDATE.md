@@ -19,9 +19,169 @@ This document is the running development record for **Adless**. It tracks what h
 - **Partner:** ClickHouse
 - **Primary AI:** Gemini
 - **Google Cloud project:** `adless-ai-2026`
-- **Current phase:** Gemini Video Intelligence (real Vertex AI analysis implemented and verified)
+- **Current phase:** Campaign Selection Agent (Gemini + ClickHouse MCP implemented and verified)
 
 ## Updates
+
+## 2026-08-12 — Campaign Selection Agent with ClickHouse MCP
+
+### Status
+
+🟢 **Completed**
+
+### Phase
+
+Gemini placement opportunity → ClickHouse MCP analytics → Gemini campaign decision
+
+### Summary
+
+Implemented the first Adless Campaign Selection Agent. The backend resolves a previously cached Gemini placement opportunity, dynamically builds a read-only ClickHouse query from its market, environment, surface, and recommended categories, executes the query exclusively through the official ClickHouse Cloud Remote MCP OAuth connection, and passes the validated candidates to Vertex Gemini for a structured final selection. No direct ClickHouse database client or database credential was added.
+
+### Runtime Architecture
+
+```text
+Cached Gemini VideoAnalysis
+→ indexed placement opportunity
+→ ClickHouse Cloud MCP get_organizations
+→ ClickHouse Cloud MCP get_services_list
+→ ClickHouse Cloud MCP run_select_query
+→ validated CampaignCandidate list
+→ Vertex Gemini gemini-2.5-flash
+→ validated SelectedCampaign
+```
+
+The current local-development MCP bridge uses the installed Codex MCP client and its existing OAuth session. OAuth tokens remain in the MCP client credential store and are never exposed to FastAPI, the browser, application code, or Git.
+
+### API Added
+
+```text
+POST /api/videos/{video_id}/placements/{placement_index}/select-campaign
+Body: {"market":"US"}
+```
+
+The market defaults to `US`. The endpoint handles missing videos, missing cached analysis, invalid placement indexes, no candidates, MCP failures, and malformed Gemini output.
+
+### Real Gemini Placement Context
+
+The original licensed living-room video was force-refreshed with stricter semantic labels:
+
+```text
+video_id: original-living-room-ai-demo-dbfa4523
+environment: living_room
+surface: coffee_table
+categories: beverage, snack, book, home_decor
+placement confidence: 0.95
+```
+
+### Actual MCP Query
+
+```sql
+SELECT
+    campaign_id,
+    brand,
+    product_name,
+    category,
+    impressions,
+    avg_exposure_seconds,
+    success_rate,
+    performance_score
+FROM adless.campaign_performance
+WHERE market = 'US'
+  AND scene_environment = 'living_room'
+  AND placement_surface = 'coffee_table'
+  AND category IN ('beverage', 'snack', 'book', 'home_decor')
+ORDER BY performance_score DESC
+LIMIT 5
+```
+
+### Real Candidates Returned
+
+| Campaign | Brand / Product | Category | Impressions | Exposure | Success | Score |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| `camp_001` | CrunchPop / CrunchPop Classic Chips | snack | 12,500 | 6.8s | 0.91 | 8.8 |
+| `camp_002` | Nova Cola / Nova Cola Original | beverage | 9,300 | 6.2s | 0.86 | 7.6 |
+
+### Real Gemini Selection
+
+```text
+campaign: camp_001
+brand: CrunchPop
+product: CrunchPop Classic Chips
+category: snack
+market: US
+surface: coffee_table
+performance score: 8.8
+success rate: 0.91
+average exposure: 6.8 seconds
+selection confidence: 0.95
+```
+
+Gemini selected CrunchPop because the snack category is compatible with the living-room coffee-table opportunity and it leads Nova Cola across performance score, historical success rate, and average exposure duration. Candidate facts are overwritten from the validated ClickHouse row after selection so Gemini cannot alter analytics values.
+
+### Creator Studio
+
+- Added `Find Best Campaign` to every placement opportunity.
+- Added per-placement loading, retry, error, and selected states.
+- Displays fictional brand, product, category, market, performance score, success rate, exposure, Gemini confidence, and reasoning.
+- Displays `Campaign intelligence powered by ClickHouse`.
+- Browser console errors during real verification: **none**.
+
+### MCP Tools Used
+
+```text
+clickhouse-cloud/get_organizations
+clickhouse-cloud/get_services_list
+clickhouse-cloud/run_select_query
+```
+
+### Files Created
+
+```text
+backend/app/agents/__init__.py
+backend/app/agents/campaign_selector.py
+backend/app/schemas/campaign_selection.py
+backend/app/services/clickhouse_mcp_service.py
+backend/tests/test_campaign_selection.py
+```
+
+### Files Modified
+
+```text
+.gitignore
+backend/app/api/videos.py
+backend/app/services/gemini_video_analyzer.py
+frontend/app/studio/videos/[videoId]/page.tsx
+frontend/services/video-service.ts
+frontend/types/index.ts
+PROJECT_UPDATE.md
+```
+
+### Verification
+
+```text
+backend: python -m pytest -q
+PASS — 22 passed, 2 non-fatal environment/library warnings
+
+frontend: npm run build
+PASS — production compile, lint, type checks, and all 6 routes
+```
+
+- Real ClickHouse MCP execution: **PASS**.
+- Candidate Pydantic validation: **PASS**.
+- Real Vertex Gemini campaign decision: **PASS**.
+- Selected campaign rendered in Creator Studio: **PASS**.
+- Browser console errors: **none**.
+- No ClickHouse credentials or OAuth tokens tracked by Git: **PASS**.
+
+### Limitations
+
+- The MCP bridge is a local-development integration that depends on the installed Codex MCP client and its OAuth session. A deployed Cloud Run version will need a managed non-interactive MCP OAuth strategy appropriate to its runtime identity.
+- Campaign selections are not persisted; refreshing the page clears the displayed selection.
+- No campaign reservation, budget, advertiser workflow, compositing, rendering, or product generation is included.
+
+### Next Step
+
+Stop after this verified milestone. Do not begin product rendering, advertiser features, PostgreSQL, or payments automatically.
 
 ## 2026-08-12 — Gemini Video Intelligence on Vertex AI
 

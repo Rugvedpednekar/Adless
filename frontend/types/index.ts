@@ -28,6 +28,20 @@ export interface VideoAnalysis {
   scenes: SceneAnalysis[];
 }
 
+export interface SelectedCampaign {
+  campaignId: string;
+  brand: string;
+  productName: string;
+  category: string;
+  market: string;
+  placementSurface: string;
+  performanceScore: number;
+  successRate: number;
+  avgExposureSeconds: number;
+  selectionConfidence: number;
+  reason: string;
+}
+
 export interface AIAnalysisState {
   status: "not_analyzed" | "analyzing" | "completed" | "failed" | "ready";
   sceneType?: string | null;

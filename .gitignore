@@ -37,6 +37,7 @@ frontend/public/videos/
 backend/uploads/videos/
 backend/.test-uploads/
 backend/cache/video_analysis/
+backend/cache/clickhouse_mcp/
 backend/data/video_catalog.json
 backend/credentials/
 **/*service-account*.json

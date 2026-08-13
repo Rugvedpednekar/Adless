@@ -29,6 +29,13 @@ changing the scene's meaning. Recommend generic product categories only, never
 brands. Explain the visual and contextual reason and give calibrated confidence
 from 0.0 to 1.0.
 
+Use short snake_case object labels for placement surfaces, such as
+coffee_table, desk, shelf, or kitchen_counter. Recommended categories must be
+commercial product verticals that naturally fit the scene, such as snack,
+beverage, coffee, book, home_decor, gaming_accessory, or electronics. A snack
+or beverage may be appropriate on an unused coffee table in a calm living-room
+scene, but recommend it only when it is genuinely natural.
+
 Return no placement for any scene involving violence, medical emergencies,
 serious injury, grief, highly emotional distress, sensitive political context,
 or dangerous activity. Never place over or in front of faces, people,
@@ -107,6 +114,10 @@ class GeminiVideoAnalyzer:
         except Exception as exc:
             raise GeminiAnalysisError(f"Gemini video analysis failed: {exc}") from exc
 
+    def get_cached_analysis(self, *, video_id: str, gcs_uri: str) -> VideoAnalysis | None:
+        cache_path = ANALYSIS_CACHE_DIRECTORY / f"{self._fingerprint(video_id, gcs_uri)}.json"
+        return self._read_cache(cache_path)
+
     def _validate_response(self, response, video_id: str) -> VideoAnalysis:
         try:
             if response.parsed is not None:
@@ -120,7 +131,7 @@ class GeminiVideoAnalyzer:
         return analysis.model_copy(update={"video_id": video_id})
 
     def _fingerprint(self, video_id: str, gcs_uri: str) -> str:
-        source = f"scene-v1:{video_id}:{gcs_uri}:{self.model}"
+        source = f"scene-v2:{video_id}:{gcs_uri}:{self.model}"
         return sha256(source.encode("utf-8")).hexdigest()
 
     def _read_cache(self, cache_path: Path) -> VideoAnalysis | None:
